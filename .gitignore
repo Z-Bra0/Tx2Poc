@@ -1,0 +1,33 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+
+# Local dependencies from earlier Node-based experiments
+node_modules/
+
+# Legacy trace output from earlier experiments
+out/
+.tx2poc-benchmark/
+.tx2poc-evals/
+
+# Generated Foundry dependencies and tx cases
+lib/*
+!lib/forge-std/
+forge-out/
+forge-cache/
+cases/*
+!cases/basetest.sol
+!cases/interface.sol
+!cases/StableMath.sol
+!cases/tokenhelper.sol
+
+# Selector cache
+.cache/
+
+# OS
+.DS_Store
