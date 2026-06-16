@@ -41,6 +41,16 @@ def test_encode_call_with_address_args() -> None:
     )
 
 
+def test_parse_custom_views() -> None:
+    assert state_probe.parse_custom_views(["creditOf=0x75807250"]) == [("creditOf", "0x75807250")]
+    assert state_probe.parse_custom_views([" creditOf = 0x75807250 "]) == [("creditOf", "0x75807250")]
+
+    with pytest.raises(ValueError, match="expected NAME=0xSELECTOR"):
+        state_probe.parse_custom_views(["creditOf"])
+    with pytest.raises(ValueError, match="duplicate custom view"):
+        state_probe.parse_custom_views(["creditOf=0x75807250", "creditOf=0x12345678"])
+
+
 def test_decode_uint_result() -> None:
     assert state_probe.decode_uint_result(None) is None
     assert state_probe.decode_uint_result("0x") is None
@@ -100,14 +110,14 @@ def test_probe_state_uses_rpc_calls_without_network(monkeypatch: pytest.MonkeyPa
                 return "0x64"
             if data.startswith(state_probe.ALLOWANCE_SELECTOR):
                 return "0x05"
-            if data.startswith(state_probe.CUSTOM_VIEW_SELECTORS["creditOf"]):
+            if data.startswith("0x75807250"):
                 return "0x03"
         raise AssertionError(f"unexpected call {method} {params}")
 
     monkeypatch.setattr(state_probe, "rpc_url", fake_rpc_url)
     monkeypatch.setattr(state_probe, "rpc_call", fake_rpc_call)
 
-    report = state_probe.probe_state("eth", "1", [address], [token], [spender], ["creditOf"])
+    report = state_probe.probe_state("eth", "1", [address], [token], [spender], [("creditOf", "0x75807250")])
 
     address_report = report["addresses"][0]
     token_report = address_report["tokens"][0]

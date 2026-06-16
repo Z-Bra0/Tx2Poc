@@ -33,11 +33,11 @@ python "$SKILL_DIR/scripts/state_probe.py" \
   --address <attacker_or_attack_contract> \
   --token <token_or_accounting_contract> \
   --spender <spender_if_allowance_matters> \
-  --view <custom_view_if_needed> \
+  --view <custom_view_name=0xselector_if_needed> \
   --markdown
 ```
 
-Custom views are opt-in. Supported simple `uint view(address)` probes: `creditOf`, `creditlessOf`, `lockedOf`, `debtOf`. Use `cast call` for protocol-specific state.
+Custom views are opt-in simple `uint view(address)` probes. Pass each custom selector explicitly, for example `--view creditOf=0x75807250`. Use `cast call` for protocol-specific state.
 
 ## Proxy Check
 

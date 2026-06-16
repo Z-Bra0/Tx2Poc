@@ -10,12 +10,8 @@ from trace_tx import canonical_chain, hex_to_int, rpc_call, rpc_url
 BALANCE_OF_SELECTOR = "0x70a08231"
 ALLOWANCE_SELECTOR = "0xdd62ed3e"
 
-CUSTOM_VIEW_SELECTORS = {
-    "creditOf": "0x75807250",
-    "creditlessOf": "0x232d88ba",
-    "lockedOf": "0xa5f1e282",
-    "debtOf": "0xd283e75f",
-}
+CustomView = tuple[str, str]
+
 
 def normalize_address(address: str) -> str:
     value = address.strip().lower()
@@ -38,9 +34,34 @@ def encode_address_arg(address: str) -> str:
 
 
 def encode_call(selector: str, *addresses: str) -> str:
-    if not selector.startswith("0x") or len(selector) != 10:
+    return normalize_selector(selector) + "".join(encode_address_arg(address) for address in addresses)
+
+
+def normalize_selector(selector: str) -> str:
+    value = selector.strip().lower()
+    if not value.startswith("0x") or len(value) != 10:
         raise ValueError(f"invalid selector: {selector}")
-    return selector + "".join(encode_address_arg(address) for address in addresses)
+    int(value[2:], 16)
+    return value
+
+
+def parse_custom_view(value: str) -> CustomView:
+    if "=" not in value:
+        raise ValueError(f"invalid custom view {value!r}: expected NAME=0xSELECTOR")
+    name, selector = value.split("=", 1)
+    name = name.strip()
+    if not name:
+        raise ValueError(f"invalid custom view {value!r}: missing name")
+    return name, normalize_selector(selector)
+
+
+def parse_custom_views(values: list[str]) -> list[CustomView]:
+    views = [parse_custom_view(value) for value in values]
+    names = [name for name, _ in views]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        raise ValueError(f"duplicate custom view name(s): {', '.join(duplicates)}")
+    return views
 
 
 def decode_uint_result(result: str | None) -> int | None:
@@ -65,7 +86,7 @@ def probe_token(
     token: str,
     address: str,
     spenders: list[str],
-    custom_views: list[str],
+    custom_views: list[CustomView],
     block: str,
 ) -> dict[str, Any]:
     token = normalize_address(token)
@@ -75,8 +96,7 @@ def probe_token(
     }
 
     custom: dict[str, Any] = {}
-    for view_name in custom_views:
-        selector = CUSTOM_VIEW_SELECTORS[view_name]
+    for view_name, selector in custom_views:
         view_result = eth_call_uint(url, token, encode_call(selector, address), block)
         if view_result.get("ok") or view_result.get("error") != "empty response":
             custom[view_name] = view_result
@@ -97,7 +117,7 @@ def probe_address(
     address: str,
     tokens: list[str],
     spenders: list[str],
-    custom_views: list[str],
+    custom_views: list[CustomView],
     block: str,
 ) -> dict[str, Any]:
     address = normalize_address(address)
@@ -117,7 +137,7 @@ def probe_state(
     addresses: list[str],
     tokens: list[str],
     spenders: list[str],
-    custom_views: list[str],
+    custom_views: list[CustomView],
 ) -> dict[str, Any]:
     chain = canonical_chain(chain)
     block_tag = normalize_block(block)
@@ -166,14 +186,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--view",
         action="append",
-        choices=sorted(CUSTOM_VIEW_SELECTORS),
         default=[],
-        help="Custom uint view(address) to probe; repeatable.",
+        metavar="NAME=0xSELECTOR",
+        help="Custom uint view(address) selector to probe; repeatable.",
     )
     parser.add_argument("--markdown", action="store_true", help="Print markdown instead of JSON")
     args = parser.parse_args(argv)
 
-    report = probe_state(args.chain, args.block, args.address, args.token, args.spender, args.view)
+    try:
+        custom_views = parse_custom_views(args.view)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    report = probe_state(args.chain, args.block, args.address, args.token, args.spender, custom_views)
     if args.markdown:
         print(render_markdown(report), end="")
     else:
