@@ -9,6 +9,7 @@ Use this checklist for final review. Keep feedback concrete and limited to issue
 - `@KeyInfo - Total Lost :` is based on real transaction impact, not generated PoC output, and uses at most two decimals plus a unit.
 - Social/reference link lines are kept in `@Analysis`, with empty links allowed, followed by one empty comment line before the PoC summary/root-cause comments.
 - All imports are used. Do not import `../interface.sol` unless at least one interface/type from it is referenced; check it before writing common local interfaces.
+- Do not define Solidity constants, labels, interfaces, or helpers for addresses/contracts that are only metadata roles and are not used by the executable PoC. Keep unused historical roles in `metadata.json`, `attack_analysis.md`, and header comments only.
 - No placeholders, empty tests, TODO/FIXME, or compile-only assertions.
 - Names and roles come from trace evidence, source/ABI, token metadata, or other trusted evidence.
 - If core identity, ABI/source, helper behavior, or exact address behavior is unclear, report the blocker instead of inventing names or opaque fallbacks.
@@ -85,10 +86,10 @@ After review/fix rounds, the main agent writes `evidence/generation_notes.md` be
 
 ## Final Review
 
-After the last review/fix round, write `final_review.md` as the user-facing summary:
+After the last review/fix round, write `final_review.md` as the user-facing summary and return the same text to the user:
 
 - `Attack Summary`: concise exploit path and impact.
-- `Forge Result`: exact `forge test --match-path ... -vv` command and pass/fail result from `evidence/poc_run.log`.
-- `Good PoC Rules Review`: final verdict and high-signal findings.
-- `Line-Specific Findings`: every remaining PoC issue with file path, line number, and a small code snippet; write `None` when no blocking issues remain.
-- `Remaining Weaknesses`: evidence gaps, fixture limitations, or intentional omissions that are not blockers.
+- `Root Cause`: the specific vulnerable behavior or missing protection the PoC exercises.
+- `Unresolved Good PoC Problems`: only problems still identified by this checklist after the final review/fix round. Include file path, line number, small code snippet, violated rule, and concrete fix for each problem. Write `None` when no unresolved good-poc-rules problems remain.
+
+Do not add separate Forge-result, pass-verdict, general reviewer-feedback, or nonblocking-weakness sections to `final_review.md`; those details belong in `evidence/generation_notes.md` unless they are unresolved good-poc-rules problems.

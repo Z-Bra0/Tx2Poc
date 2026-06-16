@@ -93,7 +93,7 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
 
    - Structure pass: set imports, main test contract, helper contracts, function names, callbacks, fork, labels, ordered key calls, and final profit forwarding. Preserve trace call order and observed read sources here.
    - Detail pass: fill typed calls, parameters, derived amounts, callback data, funding, repayment, and assertions. Derive values from the same-scope args, call outputs, balances, reserves, or state reads seen in the trace when available.
-   - Polish pass: add short `step N:` comments, remove temporary scaffolding, check naming/style, and ensure no placeholders remain.
+   - Polish pass: add short `step N:` comments, remove temporary scaffolding, unused imports, labels, interfaces, constants, metadata-only addresses, check naming/style, and ensure no placeholders remain.
 
    Expected output: `attack_analysis.md` and `$POC_FILE`.
 
@@ -119,7 +119,7 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
 
    Write `$EVIDENCE_DIR/generation_notes.md` with environment failures, evidence gaps, review rounds, fixes tried, remaining PoC flaws, and what to mention when returning the PoC.
 
-   Write user-facing `final_review.md` with a concise attack summary, the final Forge command/result from `$EVIDENCE_DIR/poc_run.log`, the final good-poc-rules verdict, remaining weaknesses, and reviewer feedback. When the review points out a PoC problem, include the file path, line number, and a small code snippet.
+   Write user-facing `final_review.md` with only a concise attack summary, root cause, and unresolved problems identified by `good_poc_rules.md`. If no unresolved good-poc-rules problems remain, write that explicitly. Return the same final-review text to the user; do not only write it to the file.
 
 No `attack_plan.md` or other intermediate planning artifact.
 
