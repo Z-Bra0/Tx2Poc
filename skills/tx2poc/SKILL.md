@@ -27,6 +27,7 @@ Before fetching traces:
 
 - Run `python "$SKILL_DIR/scripts/setup_workspace.py"` from the workspace root.
 - This creates `cases/`, copies missing helper files, writes missing `foundry.toml`/`remappings.txt` from bundled assets, and installs missing `forge-std`.
+- `setup_workspace.py` installs the current `forge-std` when missing. Use `--forge-std-ref <tag-or-commit>` only when the user explicitly asks for a pinned dependency.
 - Do not reinstall or overwrite existing helpers/config when they already exist.
 
 ## Workflow
@@ -35,13 +36,13 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
 
 1. Check fetch environment.
 
-   Confirm the chain alias, RPC/key availability, and whether trace fetching can run.
+   Confirm required RPC and explorer API keys are available.
 
    ```bash
-   python "$SKILL_DIR/scripts/check_env.py" --chain <chain> --fetch
+   python "$SKILL_DIR/scripts/check_env.py"
    ```
 
-   Stop if required fetch access is missing.
+   Stop if required access is missing.
 
 2. Build factual trace artifacts.
 
@@ -59,7 +60,7 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
 
    ```bash
    python "$SKILL_DIR/scripts/decode_calldata.py" <0x_calldata>
-   python "$SKILL_DIR/scripts/check_env.py" --chain <chain> --metadata
+   python "$SKILL_DIR/scripts/check_env.py"
    ```
 
    Use Etherscan/source/ABI/token metadata selectively for important undecoded contracts, proxy checks, tokens, or protocol behavior. Do not query just to add names.

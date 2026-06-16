@@ -31,7 +31,7 @@ Repo agent skills:
 ## Commands
 
 ```bash
-python skills/tx2poc/scripts/check_env.py --chain <chain> --fetch
+python skills/tx2poc/scripts/check_env.py
 python skills/tx2poc/scripts/trace_tx.py --chain <chain> --tx <txhash> --output-dir cases/<case>
 forge test --match-path cases/<case>/<poc_name>_exp.sol -vv
 python -m pytest tests -q
