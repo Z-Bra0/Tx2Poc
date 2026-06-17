@@ -1,0 +1,33 @@
+# Trace Summary
+# Tx:     0x1c09395848a87069c9d6ddbe5adc6249510aba7a2a83479a74b4280cafb5fb29
+# Chain:  bsc
+# Frames: 57  MaxDepth: 5  Addresses: 10
+# Format: [id] depth type from->to selector gasUsed [value] [xN LOOP]
+# Collapse threshold: 2 consecutive identical (type,to,selector)
+
+[c0000]            d=0   CALL       0x0d4024cd->0xddef10a8  0x785e4ba6          gas=500381  
+[c0001]            d=1   CALL       0xddef10a8->0xf8331a89  swap                gas=369321  
+[c0002]            d=2   CALL       0xf8331a89->0x524c7226  transfer            gas=29839   
+[c0003]            d=2   CALL       0xf8331a89->0xddef10a8  pancakeCall         gas=295391  
+[c0006]            d=3   CALL       0xddef10a8->0x10ed43c7  swapExactTokensFor  gas=94439   
+[c0007]            d=4   CALL       0x10ed43c7->0x524c7226  transferFrom        gas=8421    
+[c0009]            d=4   STATICCALL 0x10ed43c7->0xf7d8267d  getReserves         gas=2893    
+[c0011]            d=4   CALL       0x10ed43c7->0xf7d8267d  swap                gas=67074   
+[c0012]            d=5   CALL       0xf7d8267d->0x6c60bf5d  transfer            gas=32504   
+[c0017]            d=3   CALL       0xddef10a8->0x6c60bf5d  transfer            gas=17876   
+[c0018]            d=3   CALL       0xddef10a8->0xf7d8267d  skim                gas=44197   
+[c0020]            d=4   CALL       0xf7d8267d->0x524c7226  transfer            gas=5139    
+[c0022]            d=4   CALL       0xf7d8267d->0x6c60bf5d  transfer            gas=30333   
+[c0023]            d=3   CALL       0xddef10a8->0xf7d8267d  sync                gas=9170    
+[c0028]            d=3   CALL       0xddef10a8->0x10ed43c7  swapExactTokensFor  gas=55855   
+[c0029]            d=4   CALL       0x10ed43c7->0x6c60bf5d  transferFrom        gas=7580    
+[c0031]            d=4   STATICCALL 0x10ed43c7->0xf7d8267d  getReserves         gas=893     
+[c0033]            d=4   CALL       0x10ed43c7->0xf7d8267d  swap                gas=38325   
+[c0034]            d=5   CALL       0xf7d8267d->0x524c7226  transfer            gas=23039   
+[c0038]            d=3   CALL       0xddef10a8->0x524c7226  transfer            gas=3139    
+[c0043]            d=1   CALL       0xddef10a8->0x10ed43c7  swapExactTokensFor  gas=101333  
+[c0044]            d=2   CALL       0x10ed43c7->0x524c7226  transferFrom        gas=10645   
+[c0047]            d=2   STATICCALL 0x10ed43c7->0x473715a3  getReserves         gas=2893    
+[c0049]            d=2   CALL       0x10ed43c7->0x473715a3  swap                gas=63954   
+[c0050]            d=3   CALL       0x473715a3->0x8ac76a51  transfer            gas=28739   
+[c0051]            d=4   DELEGATECA 0x8ac76a51->0xba5fe23f  transfer            gas=27993   

@@ -1,0 +1,44 @@
+{
+  "case": "2026-06-DIP-0x1c09395848a8",
+  "chain": "bsc",
+  "tx_hash": "0x1c09395848a87069c9d6ddbe5adc6249510aba7a2a83479a74b4280cafb5fb29",
+  "Twitter Guy": "https://x.com/TenArmorAlert/status/2067059314519417163",
+  "block_number": 104598279,
+  "fork_block_number": 104598278,
+  "block_timestamp": "2026-06-16T16:28:38Z",
+  "poc_name": "DIP",
+  "poc_file": "dip_exp.sol",
+  "attacker": "0x0d4024cd27538350a911d9b7ee90811fa4875ba3",
+  "attack_contract": "0xddef10a85a5c67a9af8398d297aa51f8716383c7",
+  "vulnerable_contract": "0x6c60bf5db0670ae94489d3dde2c60f271625db50",
+  "victim": "0xf7d8267d01d1104da2dd30828aa9c0e1647919ef",
+  "block_miner": "0xca503a7ed99eca485da2e875aedf7758472c378c",
+  "protocol": "DIP",
+  "profit_receiver": "0x0d4024cd27538350a911d9b7ee90811fa4875ba3",
+  "profit_assets": [
+    {
+      "token": "USDC",
+      "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "amount": "111097.596667856001191208"
+    }
+  ],
+  "supporting_contracts": {
+    "pancake_router": "0x10ed43c718714eb63d5aa57b78b54704e256024e",
+    "aic_token": "0x524c72268e2053bb356ecb4c1364b5bb74644405",
+    "dip_token": "0x6c60bf5db0670ae94489d3dde2c60f271625db50",
+    "nex_token": "0xe75b76f2ce02521fd4615ff861c9b6809771c28a",
+    "usdc_proxy": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+    "usdc_implementation": "0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c",
+    "aic_nex_flash_pair": "0xf8331a897c5f32b57eab394af8adf0d00003cae1",
+    "aic_dip_pair": "0xf7d8267d01d1104da2dd30828aa9c0e1647919ef",
+    "aic_usdc_pair": "0x473715a3ad10e6ea8e8d549cc0c0b1059b2ba9bd",
+    "dip_fee_address": "0x4d202ddd3d7960e99d3d457cae7ebfea04d45359"
+  },
+  "role_evidence": {
+    "attacker": "transaction sender and final USDC receiver",
+    "attack_contract": "root transaction target; verified source exposes test(address,address,address,address), flash-swaps AIC, manipulates the DIP/AIC pair, repays the flash pair, then swaps residual AIC to USDC for the sender",
+    "vulnerable_contract": "verified DIP token source at 0x6c60... applies a sell fee to AMM-pair recipients and also executes two transfers when either endpoint is the Pancake router because the isRouter branch lacks a return",
+    "victim": "the DIP/AIC Pancake pair is the manipulated asset-holder; no separate end-user losing account is trace-supported",
+    "profit_receiver": "router sends final USDC directly to the transaction sender at frame c0050"
+  }
+}
