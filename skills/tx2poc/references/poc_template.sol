@@ -20,7 +20,6 @@ import "../basetest.sol";
 address constant ATTACKER = 0x00000000000000000000000000000000cafebabe;
 address constant ATTACK_CONTRACT = 0x00000000000000000000000000000000deadbeef;
 address constant VULNERABLE_CONTRACT = 0x00000000000000000000000000000000baddcafe;
-address constant FUNDING_TOKEN = 0x00000000000000000000000000000000c0ffeeee; // Set to the token address to track for balance logging
 // Proxy/delegatecall cases: add ENTRY_STATE_CONTRACT and CODE_TARGET or IMPLEMENTATION constants.
 // Call the entry/state address seen in the trace; use the implementation for source links and labels.
 
@@ -29,13 +28,17 @@ interface IVulnerableContract {
 }
 
 contract ContractTest is BaseTestWithBalanceLog {
+    constructor() {
+        attacker = ATTACKER;
+    }
+
     function setUp() public {
         uint256 forkBlock = 15_460_093;
         vm.createSelectFork("mainnet", forkBlock);
         vm.label(ATTACKER, "Attacker");
         vm.label(ATTACK_CONTRACT, "Attack Contract");
         vm.label(VULNERABLE_CONTRACT, "Vulnerable Contract");
-        fundingToken = FUNDING_TOKEN; // Set fundingToken to track before/after balances
+        fundingToken = address(0); // profit token: address(0) = native coin, or set to ERC-20 address
     }
 
     function testExploit() public balanceLog {
