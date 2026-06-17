@@ -32,6 +32,7 @@ Use this checklist for final review. Keep feedback concrete and limited to issue
 
 - Keep the main `BaseTestWithBalanceLog` contract first.
 - Name the main test contract `ContractTest`; do not use lower snake case names such as `<poc_name>_exp` for Solidity contract names.
+- For single-token profit: set `fundingToken` in `setUp()`. For multi-token drains: set `multiAssetLog = true` and populate `fundingTokens[]`; the `balanceLog` modifier handles both automatically. Set `attacker` when profit flows to a separate address (defaults to `address(this)`).
 - Preserve official short-symbol casing.
 - Avoid leading underscores in authored helper names.
 - Add short `step N:` comments for key phases.

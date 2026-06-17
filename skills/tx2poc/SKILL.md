@@ -92,7 +92,7 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
    Write the Solidity in three passes:
 
    - Structure pass: set imports, main test contract, helper contracts, function names, callbacks, fork, labels, ordered key calls, and final profit forwarding. Preserve trace call order and observed read sources here.
-   - Detail pass: fill typed calls, parameters, derived amounts, callback data, funding, repayment, and assertions. Derive values from the same-scope args, call outputs, balances, reserves, or state reads seen in the trace when available. Set `fundingToken` to the profit asset address in `setUp()` to enable the `@balanceLog` modifier for automatic before/after balance logging.
+   - Detail pass: fill typed calls, parameters, derived amounts, callback data, funding, repayment, and assertions. Derive values from the same-scope args, call outputs, balances, reserves, or state reads seen in the trace when available. Set `fundingToken` to the profit asset address in `setUp()` to enable the `balanceLog` modifier for automatic before/after balance logging. For exploits that drain multiple tokens (e.g. lending pool drains across several reserves), set `multiAssetLog = true` and populate `fundingTokens[]` with each tracked token instead — the same `balanceLog` modifier handles both modes. If profit flows to a separate address, set `attacker` to that address (defaults to `address(this)`).
    - Polish pass: add short `step N:` comments, remove temporary scaffolding, unused imports, labels, interfaces, constants, metadata-only addresses, check naming/style, and ensure no placeholders remain.
 
    Expected output: `attack_analysis.md` and `$POC_FILE`.
@@ -184,7 +184,7 @@ Detailed format and quality rules live in `$SKILL_DIR/references/good_poc_rules.
 - Call the trace entry/state address. Use implementation/code-target evidence for interfaces, labels, and source links.
 - Preserve core economics: asset provenance, callbacks, phase order, state-dependent repetition, final forwarding, and profit/state assertion.
 - Keep declarations and numeric values scoped near the logic that uses them.
-- Set `fundingToken` to the profit asset address (or set `FUNDING_TOKEN` constant and assign in `setUp()`) to use the `@balanceLog` modifier for automatic before/after balance logging on the test function.
+- Set `fundingToken` to the profit asset address (or set `FUNDING_TOKEN` constant and assign in `setUp()`) to use the `balanceLog` modifier for automatic before/after balance logging. For multi-token drains, set `multiAssetLog = true` and populate `fundingTokens[]` instead — the same modifier applies. Set `attacker` to override which address is logged (default `address(this)`).
 
 ## Script Map
 

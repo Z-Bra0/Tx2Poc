@@ -9,10 +9,29 @@ interface IERC20BalanceLog {
     function symbol() external view returns (string memory);
 }
 
+// Base contract for DeFi exploit PoCs. Inherit from this instead of Test directly.
+// Provides before/after balance logging via the `balanceLog` modifier.
+//
+// Single-asset mode (default):
+//   Set `fundingToken` to the token you profit in (address(0) = native ETH).
+//   The `balanceLog` modifier logs that one token before and after testExploit().
+//
+// Multi-asset mode:
+//   Set `multiAssetLog = true` and populate `fundingTokens[]` with every token to track.
+//   The same `balanceLog` modifier logs all of them. No override needed.
+//   Optionally set `attacker` to log a different address (e.g. a separate profit contract).
+//   If `attacker` is left as address(0), it resolves to address(this).
 contract BaseTestWithBalanceLog is Test {
+    // Single-asset mode: the token to log profit in. address(0) = native ETH.
     address fundingToken = address(0);
+    // Multi-asset mode: full list of tokens to track (ERC-20 or address(0) for native).
+    address[] fundingTokens;
+    // Set to true to enable multi-asset logging via fundingTokens[].
+    bool multiAssetLog = false;
+    // Address whose balances are logged. Defaults to address(this) when left as address(0).
+    address attacker;
 
-    function _tokenSymbol(address token) internal view returns (string memory) {
+    function _tokenSymbol(address token) private view returns (string memory) {
         if (token == address(0)) return "ETH";
         try IERC20BalanceLog(token).symbol() returns (string memory symbol) {
             return symbol;
@@ -21,22 +40,26 @@ contract BaseTestWithBalanceLog is Test {
         }
     }
 
-    function _tokenDecimals(address token) internal view returns (uint8) {
+    function _tokenDecimals(address token) private view returns (uint8) {
         if (token == address(0)) return 18;
-        try IERC20BalanceLog(token).decimals() returns (uint8 decimals) {
-            return decimals;
+        try IERC20BalanceLog(token).decimals() returns (uint8 d) {
+            return d;
         } catch {
             return 18;
         }
     }
 
-    function _tokenBalance(address token, address account) internal view returns (uint256) {
+    function _tokenBalance(address token, address account) private view returns (uint256) {
         if (token == address(0)) return account.balance;
         try IERC20BalanceLog(token).balanceOf(account) returns (uint256 balance) {
             return balance;
         } catch {
             return 0;
         }
+    }
+
+    function _attacker() private view returns (address) {
+        return attacker == address(0) ? address(this) : attacker;
     }
 
     function logTokenBalance(address token, address account, string memory label) public {
@@ -47,15 +70,44 @@ contract BaseTestWithBalanceLog is Test {
         );
     }
 
+    function logMultipleTokenBalances(address[] memory tokens, address account, string memory label) internal {
+        emit log_string(string(abi.encodePacked("=== ", label, " ===")));
+        for (uint256 i = 0; i < tokens.length; i++) {
+            logTokenBalance(tokens[i], account, "");
+        }
+    }
+
     modifier balanceLog() virtual {
-        logTokenBalance(fundingToken, address(this), "Attacker Before exploit");
+        if (multiAssetLog) {
+            _logMultiAssetBalances("Before exploit");
+        } else {
+            logTokenBalance(fundingToken, _attacker(), "Attacker Before exploit");
+        }
         _;
-        logTokenBalance(fundingToken, address(this), "Attacker After exploit");
+        if (multiAssetLog) {
+            _logMultiAssetBalances("After exploit");
+        } else {
+            logTokenBalance(fundingToken, _attacker(), "Attacker After exploit");
+        }
     }
 
     modifier balanceLog2(address target) virtual {
         logTokenBalance(fundingToken, target, "Attacker Before exploit");
         _;
         logTokenBalance(fundingToken, target, "Attacker After exploit");
+    }
+
+    function _addFundingToken(address token) internal {
+        fundingTokens.push(token);
+    }
+
+    function _addFundingTokens(address[] memory tokens) internal {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            fundingTokens.push(tokens[i]);
+        }
+    }
+
+    function _logMultiAssetBalances(string memory label) internal {
+        logMultipleTokenBalances(fundingTokens, _attacker(), label);
     }
 }
