@@ -39,6 +39,17 @@ Body:
 ref: source: <tweet-or-source-link>
 ```
 
+## Approval Gates
+
+Ask before:
+
+- Writing to `DeFiHackLabs/`: show branch, PoC path, README target, PR title/body.
+- Committing: show `git user.name`, `git user.email`, commit message.
+- GitHub writes: show account, email, remote, branch, action.
+- Changing `GITHUB_TOKEN`, `GH_TOKEN`, or active `gh` account.
+
+No magic phrase. Read-only checks, fetches, and local tests do not need confirmation.
+
 ## Workflow
 
 1. Inspect the case and identify the PoC.
@@ -85,7 +96,7 @@ ref: source: <tweet-or-source-link>
 
    Do not export unless the PoC is a passing, self-contained exploit test. Reject TODO/FIXME placeholders, compile-only tests, raw replay, trace-frame comments, an empty source/message line under `// @Analysis`, or an empty `// Twitter Guy` value.
 
-   Before writing to `DeFiHackLabs/`, show branch, file path, README target, PR title/body, then ask for explicit confirmation.
+   Follow Approval Gates before writing to `DeFiHackLabs/`.
 
 6. Create a branch and copy only the final PoC.
 
@@ -128,9 +139,7 @@ ref: source: <tweet-or-source-link>
 8. Test, commit, push, and open a draft PR.
 
    Use the PR title as the commit message. Derive `<owner>` from `origin`, not `upstream`.
-   Before any GitHub write, show one compact confirmation:
-   `account=<gh account/source> email=<commit email> remote=<owner/repo> branch=<branch> action=<push/pr/delete>`.
-   Require explicit approval for those exact values.
+   Follow Approval Gates before committing, pushing, or creating the PR.
 
    ```bash
    forge test --contracts ./src/test/YYYY-MM/<poc_name>_exp.sol -vvv
@@ -151,8 +160,7 @@ ref: source: <tweet-or-source-link>
 - Sync from `upstream` with fast-forward only before duplicate checks or branch creation.
 - Use a separate branch for each DeFiHackLabs PR.
 - After syncing latest upstream, stop if the attack transaction hash already appears in DeFiHackLabs.
-- Confirm with the user before writing files into `DeFiHackLabs/`.
-- Confirm before committing or any GitHub write: push, PR create/update/close, or remote branch delete. Do not require a magic phrase.
+- Follow Approval Gates.
 - Use the attack timestamp from `block.json` for both the `src/test/YYYY-MM/` folder and the timestamp entered into `add_new_entry.py`.
 - Use the attack year from `block.json` to decide whether the full README incident entry belongs in `past/YYYY/README.md`. `add_new_entry.py` does not do this automatically.
 - Do not overwrite existing DeFiHackLabs PoCs or reuse an existing PoC basename.
