@@ -36,7 +36,7 @@ Add TokenHolder PoC. Oct 7. 20 WBNB
 Body:
 
 ```text
-ref: source: <tweet-or-source-link>
+source: <tweet-or-source-link>
 ```
 
 ## Approval Gates
@@ -141,13 +141,15 @@ No magic phrase. Read-only checks, fetches, and local tests do not need confirma
    Use the PR title as the commit message. Derive `<owner>` from `origin`, not `upstream`.
    Follow Approval Gates before committing, pushing, or creating the PR.
 
+   Test with the README Forge command before staging. For named forks, temporarily copy only the matching RPC URL from this repo's `foundry.toml` to the same alias in `DeFiHackLabs/foundry.toml`; restore it after the test and confirm `git diff -- foundry.toml` is empty. Do not use `--config-path ../foundry.toml` or use this to hide compile, revert, or invariant failures.
+
    ```bash
    forge test --contracts ./src/test/YYYY-MM/<poc_name>_exp.sol -vvv
    git add src/test/YYYY-MM/<poc_name>_exp.sol README.md past/YYYY/README.md
    git commit -m "Add <Name> PoC. <Mon D>. <Lost Amount>"
    git push origin tx2poc/<case-or-victim>
    git remote get-url origin
-   gh pr create --repo SunWeb3Sec/DeFiHackLabs --base main --head <owner>:tx2poc/<case-or-victim> --title "Add <Name> PoC. <Mon D>. <Lost Amount>" --body "ref: source: <tweet-or-source-link>" --draft
+   gh pr create --repo SunWeb3Sec/DeFiHackLabs --base main --head <owner>:tx2poc/<case-or-victim> --title "Add <Name> PoC. <Mon D>. <Lost Amount>" --body "source: <tweet-or-source-link>" --draft
    ```
 
    Prefer the verified README Forge command if it differs.

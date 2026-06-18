@@ -8,7 +8,8 @@ Use this checklist for final review. Keep feedback concrete and limited to issue
 - `metadata.json`, `attack_analysis.md`, and the Solidity agree on attacker, attack contract, vulnerable implementation/source address, fork block, and profit asset. Put proxy, entry, and victim roles in metadata or analysis when useful.
 - `@KeyInfo - Total Lost :` is based on real transaction impact, not generated PoC output, and uses at most two decimals plus a unit.
 - Social/reference link lines are kept in `@Analysis`, with empty links allowed, followed by one empty comment line before the PoC summary/root-cause comments.
-- All imports are used. Do not import `../interface.sol` unless at least one interface/type from it is referenced; check it before writing common local interfaces.
+- All imports are used. Import shared helpers only when referenced: `../interface.sol`, `../StableMath.sol`, `../tokenhelper.sol`.
+- Reuse shared helpers before writing local code: `interface.sol` for common interfaces, `StableMath.sol` for Balancer stable math, and `tokenhelper.sol`/`TokenHelper` for token helpers. Define local code only for trace-specific surfaces that are missing from shared helpers.
 - Do not define Solidity constants, labels, interfaces, or helpers for addresses/contracts that are only metadata roles and are not used by the executable PoC. Keep unused historical roles in `metadata.json`, `attack_analysis.md`, and header comments only.
 - No placeholders, empty tests, TODO/FIXME, or compile-only assertions.
 - Names and roles come from trace evidence, source/ABI, token metadata, or other trusted evidence.
@@ -34,6 +35,7 @@ Use this checklist for final review. Keep feedback concrete and limited to issue
 - Name the main test contract `ContractTest`; do not use lower snake case names such as `<poc_name>_exp` for Solidity contract names.
 - Preserve official short-symbol casing.
 - Avoid leading underscores in authored helper names.
+- Avoid single-use wrappers around one external call, `userCmd`, or `abi.encode`. Inline the call at the exploit step unless the helper is reused or hides real multi-step logic. For one-off command IDs/selectors, prefer an adjacent comment or same-scope local only when it improves clarity; do not replace a wrapper with file-scope constants for values used once.
 - Add short `step N:` comments for key phases.
 - Use `vm.createSelectFork("<chain-alias>", forkBlock)` with a local `forkBlock`; do not hardcode provider URLs in Solidity.
 
