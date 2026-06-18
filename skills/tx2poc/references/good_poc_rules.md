@@ -46,13 +46,16 @@ Use this checklist for final review. Keep feedback concrete and limited to issue
 
 ## Magic Numbers
 
-- Any fixable hardcoded trace-exact irregular amount is `needs work`, not `pass`. Derive it from balances, reserves, allowances, function parameters, return values, or other state reads when a reasonable source exists. Retain a fixed value only after derivation was attempted and unreliable; keep it local and record the trace/source and reason in `evidence/generation_notes.md`.
-- Use `evidence/tx_context.json.call_evidence` before keeping an irregular amount. If a helper call has no amount parameter, derive the amount inside that helper from same-scope call outputs, balances, reserves, or state reads.
-- When the source of a magic amount is unclear, add temporary logs for likely sources before keeping it: caller balance, helper balance, pool balance, reserve values, allowance, callback delta, and repayment amount. Use those logs to test derivation candidates.
+- Numeric literals are acceptable when they are common units or protocol constants: `1e18`, bps denominators, ERC20 decimals, small fixed loop counts, documented enum IDs, and values copied from verified source.
+- Trace-exact irregular amounts are `needs work` when they can be derived. Prefer balances, reserves, allowances, function parameters, return values, or same-scope state reads.
+- Before keeping an irregular amount, check `evidence/tx_context.json.call_evidence`. If derivation is unreliable, keep the value local and record the trace/source plus reason in `evidence/generation_notes.md`.
+- If a helper call has no amount parameter, derive the amount inside that helper from same-scope call outputs, balances, reserves, or state reads.
+- When the source is unclear, add temporary logs for likely sources before keeping the literal: caller/helper/pool balances, reserves, allowance, callback delta, and repayment amount.
 - Native-token amounts may come from `address(target).balance`. `callTracer` does not show this opcode read, so use trace value movement as evidence when a native market/account sends the same amount later.
 - Avoid exact trace-profit assertions unless exact value equality is the exploit property. Prefer threshold/range assertions such as `assertGt(profit, expectedMinimum)` so the PoC proves impact without overfitting dust-level trace output.
-- Keep clean setup amounts near the step that uses them; promote numbers to constants only when reused, protocol-configured, or clarifying a formula.
-- Do not put fork blocks, flash-loan amounts, seed amounts, minimum-profit thresholds, trace-exact amounts, or one-off selectors at file scope.
+- Keep clean setup amounts near the step that uses them. Promote numbers to constants only when reused, protocol-configured, or clarifying a formula.
+- Keep fork blocks, flash-loan amounts, seed amounts, minimum-profit thresholds, trace-exact amounts, and one-off selectors local to the use site.
+- Avoid huge bound/sentinel literals such as long runs of 9s. Use `type(uint256).max`, verified protocol constants, or small expressions derived from verified bounds. If a large literal must remain, keep it near the use site and cite the source in `evidence/generation_notes.md`.
 
 ## Review Output
 
