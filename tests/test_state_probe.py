@@ -51,11 +51,42 @@ def test_parse_custom_views() -> None:
         state_probe.parse_custom_views(["creditOf=0x75807250", "creditOf=0x12345678"])
 
 
+def test_parse_address_views() -> None:
+    assert state_probe.parse_address_views(["parent=0xf1f9d8c9"]) == [("parent", "0xf1f9d8c9", "address")]
+    assert state_probe.parse_address_views([" owner = 0x8da5cb5b:none "]) == [("owner", "0x8da5cb5b", "none")]
+
+    with pytest.raises(ValueError, match="expected NAME=0xSELECTOR"):
+        state_probe.parse_address_views(["parent"])
+    with pytest.raises(ValueError, match="expected arg kind"):
+        state_probe.parse_address_views(["owner=0x8da5cb5b:uint"])
+    with pytest.raises(ValueError, match="duplicate address view"):
+        state_probe.parse_address_views(["parent=0xf1f9d8c9", "parent=0xaaaa1111"])
+
+
 def test_decode_uint_result() -> None:
     assert state_probe.decode_uint_result(None) is None
     assert state_probe.decode_uint_result("0x") is None
     assert state_probe.decode_uint_result("0x0") == 0
     assert state_probe.decode_uint_result("0x7b") == 123
+
+
+def test_decode_address_result() -> None:
+    assert state_probe.decode_address_result(None) is None
+    assert state_probe.decode_address_result("0x") is None
+    assert state_probe.decode_address_result("0x1234") is None
+    assert state_probe.decode_address_result("0x" + ("00" * 32) + ("00" * 32)) is None
+    assert (
+        state_probe.decode_address_result(
+            "0x0000000000000000000000011111111111111111111111111111111111111111"
+        )
+        is None
+    )
+    assert (
+        state_probe.decode_address_result(
+            "0x0000000000000000000000001111111111111111111111111111111111111111"
+        )
+        == "0x1111111111111111111111111111111111111111"
+    )
 
 
 def test_render_markdown() -> None:
@@ -76,6 +107,17 @@ def test_render_markdown() -> None:
                 ],
             }
         ],
+        "contracts": [
+            {
+                "contract": "0x3333333333333333333333333333333333333333",
+                "views": {"owner": {"ok": True, "value": "0x4444444444444444444444444444444444444444"}},
+                "addressViews": {
+                    "0x1111111111111111111111111111111111111111": {
+                        "parent": {"ok": True, "value": "0x5555555555555555555555555555555555555555"}
+                    }
+                },
+            }
+        ],
     }
 
     rendered = state_probe.render_markdown(report)
@@ -84,6 +126,9 @@ def test_render_markdown() -> None:
     assert "codeLength: 42" in rendered
     assert "balanceOf: 100" in rendered
     assert "creditOf: ERR empty response" in rendered
+    assert "contract 0x3333333333333333333333333333333333333333" in rendered
+    assert "owner: 0x4444444444444444444444444444444444444444" in rendered
+    assert "parent: 0x5555555555555555555555555555555555555555" in rendered
 
 
 def test_probe_state_uses_rpc_calls_without_network(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -128,3 +173,58 @@ def test_probe_state_uses_rpc_calls_without_network(monkeypatch: pytest.MonkeyPa
     assert token_report["allowances"][spender]["value"] == 5
     assert token_report["customViews"]["creditOf"]["value"] == 3
     assert [method for method, _ in calls] == ["eth_getCode", "eth_getBalance", "eth_call", "eth_call", "eth_call"]
+
+
+def test_probe_state_uses_address_returning_contract_views(monkeypatch: pytest.MonkeyPatch) -> None:
+    address = "0x1111111111111111111111111111111111111111"
+    helper = "0x2222222222222222222222222222222222222222"
+    owner = "0x3333333333333333333333333333333333333333"
+    parent = "0x4444444444444444444444444444444444444444"
+
+    def encode_address_result(value: str) -> str:
+        return "0x" + state_probe.encode_address_arg(value)
+
+    calls: list[tuple[str, list[object]]] = []
+
+    def fake_rpc_url(chain: str) -> str:
+        assert chain == "bsc"
+        return "mock://rpc"
+
+    def fake_rpc_call(url: str, method: str, params: list[object]) -> str:
+        assert url == "mock://rpc"
+        calls.append((method, params))
+        if method == "eth_getCode":
+            return "0x6000"
+        if method == "eth_getBalance":
+            return "0x0"
+        if method == "eth_call":
+            data = params[0]["data"]  # type: ignore[index]
+            if data == "0x8da5cb5b":
+                return encode_address_result(owner)
+            if data.startswith("0xf1f9d8c9"):
+                assert data.endswith(address[2:])
+                return encode_address_result(parent)
+        raise AssertionError(f"unexpected call {method} {params}")
+
+    monkeypatch.setattr(state_probe, "rpc_url", fake_rpc_url)
+    monkeypatch.setattr(state_probe, "rpc_call", fake_rpc_call)
+
+    report = state_probe.probe_state(
+        "bnb",
+        "1",
+        [address],
+        [],
+        [],
+        [],
+        [helper],
+        [
+            state_probe.AddressView("owner", "0x8da5cb5b", "none"),
+            state_probe.AddressView("parent", "0xf1f9d8c9", "address"),
+        ],
+    )
+
+    contract_report = report["contracts"][0]
+    assert contract_report["contract"] == helper
+    assert contract_report["views"]["owner"]["value"] == owner
+    assert contract_report["addressViews"][address]["parent"]["value"] == parent
+    assert [method for method, _ in calls] == ["eth_getCode", "eth_getBalance", "eth_call", "eth_call"]

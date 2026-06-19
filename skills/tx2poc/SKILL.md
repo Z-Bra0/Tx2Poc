@@ -83,7 +83,7 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
    python "$SKILL_DIR/scripts/state_probe.py" --chain <chain> --block <fork_block> --address <address> --token <token>
    ```
 
-   Candidate addresses include tx sender, tx target/root attack contract, profit receiver, delegatecall caller/code target, and helper contracts that already existed before the tx. Choose relevant tokens and simple address-keyed `uint view(address)` probes from the trace/source. Use protocol-specific `cast call` for other state. Use results to decide normal local helpers vs historical-address execution such as `vm.etch`.
+   Candidate addresses include tx sender, tx target/root attack contract, profit receiver, delegatecall caller/code target, and helper contracts that already existed before the tx. Choose relevant tokens and simple address-keyed `uint view(address)` probes from the trace/source. For helper/callee relationships, use `--contract` with address-returning `--address-view` probes such as `parent(address)`, `referrer(address)`, `owner()`, or `admin()`. Use protocol-specific `cast call` for other state. Use results to decide normal local helpers vs historical-address execution such as `vm.etch`.
 
 6. Author the analysis and PoC.
 

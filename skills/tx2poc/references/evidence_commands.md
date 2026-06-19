@@ -34,10 +34,14 @@ python "$SKILL_DIR/scripts/state_probe.py" \
   --token <token_or_accounting_contract> \
   --spender <spender_if_allowance_matters> \
   --view <custom_view_name=0xselector_if_needed> \
+  --contract <callee_or_helper_if_needed> \
+  --address-view <custom_address_view_name=0xselector[:address|none]> \
   --markdown
 ```
 
 Custom views are opt-in simple `uint view(address)` probes. Pass each custom selector explicitly, for example `--view creditOf=0x75807250`. Use `cast call` for protocol-specific state.
+
+Address views are opt-in address-returning helper probes. The default argument kind is `address`, for example `--contract <helper> --address-view parent=0xf1f9d8c9` calls `parent(<address>)`. Use `:none` for no-arg views such as `owner()` or `admin()`, for example `--address-view owner=0x8da5cb5b:none`.
 
 ## Proxy Check
 
