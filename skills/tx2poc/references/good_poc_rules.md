@@ -28,6 +28,7 @@ Use this checklist for final review. Keep feedback concrete and limited to issue
 
 - If the trace uses self-call, attacker `DELEGATECALL`, EIP-7702-like execution, or custom `msg.sender` accounting, compare historical attacker/attack-contract state with local PoC state before choosing fresh local helpers.
 - Probe relevant balances, allowances, and simple address-keyed views such as `creditOf`, `creditlessOf`, `lockedOf`, or `debtOf` by passing explicit selectors. Use protocol-specific calls for epoch/snapshot/collateral state. If historical state matters, use `vm.etch` or historical-address execution and explain why.
+- If a historical attack address only matters because a pre-existing callee/helper stores address-keyed state, patch that callee/helper state to recognize the fresh PoC contract. Avoid using `vm.etch` or deploy-at-address unless the exact address itself is unavoidable. Assert the checked callee/helper state.
 
 ## Format
 
