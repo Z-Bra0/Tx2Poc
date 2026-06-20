@@ -14,6 +14,7 @@ Repo agent skills:
 
 - `tx2poc-benchmark` (`.agents/skills/tx2poc-benchmark`): compare generated output against delayed DeFiHackLabs references.
 - `defihacklabs-pr` (`.agents/skills/defihacklabs-pr`): export a finished tx2poc case into a local DeFiHackLabs fork, push a branch, and open a draft PR.
+- `twitter-browser-mcp` (`.agents/skills/twitter-browser-mcp`): monitor configured X/Twitter accounts for on-chain attack alerts and extract tx/event details.
 
 ## Basics
 
