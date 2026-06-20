@@ -12,7 +12,7 @@ normalize; you make the final protocol/chain/confidence judgment.
 ## State
 
 ```bash
-python scripts/twitter_state.py window
+python .agents/skills/twitter-nitter-rss/scripts/twitter_state.py window
 ```
 
 If no `last_check_time` exists, defaults to `now - 10 minutes`. Only keep posts where:
@@ -37,7 +37,7 @@ Do not advance state after a failed or incomplete scan.
 Pass the window from the state step:
 
 ```bash
-python scripts/nitter_fetch.py --since <last_check_time> --until <check_started_at>
+python .agents/skills/twitter-nitter-rss/scripts/nitter_fetch.py --since <last_check_time> --until <check_started_at>
 ```
 
 Useful flags:
@@ -67,7 +67,7 @@ account handle. Use `unknown` when unclear.
 Only after a successful scan of all accounts:
 
 ```bash
-python scripts/twitter_state.py complete --checked-at <check_started_at>
+python .agents/skills/twitter-nitter-rss/scripts/twitter_state.py complete --checked-at <check_started_at>
 ```
 
 ## Output

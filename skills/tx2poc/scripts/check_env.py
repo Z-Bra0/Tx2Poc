@@ -21,6 +21,13 @@ def check_env(environ: Mapping[str, str] | None = None) -> None:
     missing = missing_env_vars(environ)
     if missing:
         raise RuntimeError(f"Missing required environment variable(s): {', '.join(missing)}")
+    env = os.environ if environ is None else environ
+    if not env.get("ALCHEMY_API_KEY"):
+        print(
+            "Note: ALCHEMY_API_KEY is not set. Traces will use keyless Blockscout "
+            "where available, but some features may be limited.",
+            flush=True,
+        )
 
 
 def main() -> int:

@@ -312,14 +312,18 @@ def rpc_url(chain: str) -> str:
     return f"https://{slug}.g.alchemy.com/v2/{api_key}"
 
 
-def resolve_source(source: str | None) -> str:
+def resolve_source(source: str | None, chain: str | None = None) -> str:
     normalized = (source or "auto").lower()
     if normalized not in TRACE_SOURCES:
         supported = ", ".join(TRACE_SOURCES)
         raise RuntimeError(f"Unsupported source: {source}. Choose from {supported}")
     if normalized != "auto":
         return normalized
-    return "alchemy" if os.environ.get("ALCHEMY_API_KEY") else "blockscout"
+    if os.environ.get("ALCHEMY_API_KEY"):
+        if chain and canonical_chain(chain) not in ALCHEMY_CHAIN_MAP:
+            return "blockscout"
+        return "alchemy"
+    return "blockscout"
 
 
 def blockscout_base(chain: str) -> str:
@@ -1447,7 +1451,7 @@ def main() -> int:
 
     set_workspace_root(args.workspace_root)
     chain = canonical_chain(args.chain)
-    source = resolve_source(args.source)
+    source = resolve_source(args.source, chain)
     case_dir = resolve_case_dir(args.output_dir)
     case_dir.mkdir(parents=True, exist_ok=True)
     artifact_dir = evidence_dir(case_dir)

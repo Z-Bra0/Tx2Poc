@@ -323,7 +323,7 @@ def main() -> int:
         keep_all=args.all,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
-    return 0
+    return 1 if result.get("failures") else 0
 
 
 if __name__ == "__main__":
