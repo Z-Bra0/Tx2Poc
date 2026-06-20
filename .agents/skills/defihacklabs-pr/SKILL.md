@@ -158,7 +158,7 @@ No magic phrase. Read-only checks, fetches, and local tests do not need confirma
 
 ## Guardrails
 
-- Treat `DeFiHackLabs/` as a gitignored local clone of the user's fork, not as a TxAnalyzer submodule.
+- Treat `DeFiHackLabs/` as a gitignored local clone of the user's fork, not as a tx2poc submodule.
 - Require the DeFiHackLabs repo to be clean before applying changes.
 - Require `origin` to be the user's fork and `upstream` to point to `SunWeb3Sec/DeFiHackLabs`.
 - Sync from `upstream` with fast-forward only before duplicate checks or branch creation.
