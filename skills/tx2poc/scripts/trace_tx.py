@@ -27,6 +27,28 @@ ALCHEMY_CHAIN_MAP = {
     "bsc": "bnb-mainnet",
 }
 
+# Public Blockscout instances. Each exposes a keyless JSON-RPC proxy at
+# `/api/eth-rpc` (tx/receipt/block) and a Parity-style trace at
+# `/api/v2/transactions/{hash}/raw-trace`.
+BLOCKSCOUT_CHAIN_MAP = {
+    "ethereum": "https://eth.blockscout.com",
+    "optimism": "https://explorer.optimism.io",
+    "base": "https://base.blockscout.com",
+    "arbitrum": "https://arbitrum.blockscout.com",
+    "polygon": "https://polygon.blockscout.com",
+    "gnosis": "https://gnosis.blockscout.com",
+}
+
+TRACE_SOURCES = ("auto", "alchemy", "blockscout")
+
+# Parity `callType`/trace `type` -> geth callTracer frame type.
+PARITY_CALL_TYPE_MAP = {
+    "call": "CALL",
+    "callcode": "CALLCODE",
+    "delegatecall": "DELEGATECALL",
+    "staticcall": "STATICCALL",
+}
+
 CHAIN_ALIASES = {
     "eth": "ethereum",
     "mainnet": "ethereum",
@@ -259,6 +281,24 @@ def json_http_post(url: str, payload: Any, timeout: int = 120) -> Any:
         raise RuntimeError(f"Network error: {exc.reason}") from exc
 
 
+def json_http_get(url: str, timeout: int = 120) -> Any:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "tx2poc/1.0",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"HTTP {exc.code}: {exc.reason}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Network error: {exc.reason}") from exc
+
+
 def rpc_url(chain: str) -> str:
     chain = canonical_chain(chain)
     api_key = os.environ.get("ALCHEMY_API_KEY")
@@ -270,6 +310,88 @@ def rpc_url(chain: str) -> str:
         supported = ", ".join(sorted(ALCHEMY_CHAIN_MAP))
         raise RuntimeError(f"Unsupported chain: {chain}. Supported: {supported}")
     return f"https://{slug}.g.alchemy.com/v2/{api_key}"
+
+
+def resolve_source(source: str | None) -> str:
+    normalized = (source or "auto").lower()
+    if normalized not in TRACE_SOURCES:
+        supported = ", ".join(TRACE_SOURCES)
+        raise RuntimeError(f"Unsupported source: {source}. Choose from {supported}")
+    if normalized != "auto":
+        return normalized
+    return "alchemy" if os.environ.get("ALCHEMY_API_KEY") else "blockscout"
+
+
+def blockscout_base(chain: str) -> str:
+    chain = canonical_chain(chain)
+    base = BLOCKSCOUT_CHAIN_MAP.get(chain)
+    if not base:
+        supported = ", ".join(sorted(BLOCKSCOUT_CHAIN_MAP))
+        raise RuntimeError(f"Blockscout source unsupported for chain: {chain}. Supported: {supported}")
+    return base
+
+
+def rpc_endpoint(chain: str, source: str) -> str:
+    if source == "blockscout":
+        return f"{blockscout_base(chain)}/api/eth-rpc"
+    return rpc_url(chain)
+
+
+def parity_frame_type(entry: dict[str, Any]) -> str:
+    trace_type = (entry.get("type") or "call").lower()
+    if trace_type == "call":
+        call_type = (entry.get("action", {}).get("callType") or "call").lower()
+        return PARITY_CALL_TYPE_MAP.get(call_type, call_type.upper())
+    if trace_type == "create":
+        return "CREATE"
+    if trace_type == "suicide":
+        return "SELFDESTRUCT"
+    return trace_type.upper()
+
+
+def parity_entry_to_node(entry: dict[str, Any]) -> dict[str, Any]:
+    action = entry.get("action") or {}
+    result = entry.get("result") or {}
+    node: dict[str, Any] = {
+        "type": parity_frame_type(entry),
+        "from": action.get("from") or action.get("address"),
+        "to": action.get("to") or action.get("refundAddress") or result.get("address"),
+        "value": action.get("value") or action.get("balance") or "0x0",
+        "gas": action.get("gas", "0x0"),
+        "gasUsed": result.get("gasUsed", "0x0"),
+        "input": action.get("input") or action.get("init") or "0x",
+        "output": result.get("output") or result.get("code"),
+        "calls": [],
+    }
+    if entry.get("error"):
+        node["error"] = entry["error"]
+    return node
+
+
+def parity_trace_to_calltracer(traces: Any) -> dict[str, Any]:
+    if isinstance(traces, dict):
+        message = traces.get("message") or traces.get("error") or json.dumps(traces)[:200]
+        raise RuntimeError(f"Blockscout raw-trace error: {message}")
+    if not isinstance(traces, list) or not traces:
+        raise RuntimeError("Blockscout returned no trace frames (raw-trace empty)")
+
+    ordered = sorted(traces, key=lambda entry: entry.get("traceAddress") or [])
+    nodes: dict[tuple[int, ...], dict[str, Any]] = {}
+    root: dict[str, Any] | None = None
+    for entry in ordered:
+        path = tuple(entry.get("traceAddress") or [])
+        node = parity_entry_to_node(entry)
+        nodes[path] = node
+        if not path:
+            root = node
+            continue
+        parent = nodes.get(path[:-1])
+        if parent is None:
+            raise RuntimeError(f"Blockscout trace missing parent for path {list(path)}")
+        parent["calls"].append(node)
+    if root is None:
+        raise RuntimeError("Blockscout trace has no root frame (empty traceAddress)")
+    return root
 
 
 def rpc_call(url: str, method: str, params: list[Any]) -> Any:
@@ -286,7 +408,16 @@ def evidence_dir(case_dir: Path) -> Path:
     return case_dir / "evidence"
 
 
-def fetch_trace(chain: str, tx_hash: str, artifact_dir: Path, force: bool) -> None:
+def fetch_call_trace(chain: str, tx_hash: str, source: str, url: str) -> dict[str, Any]:
+    if source == "blockscout":
+        print("[4/4] raw-trace (Blockscout) ...")
+        raw_url = f"{blockscout_base(chain)}/api/v2/transactions/{tx_hash}/raw-trace"
+        return parity_trace_to_calltracer(json_http_get(raw_url))
+    print("[4/4] debug_traceTransaction (callTracer) ...")
+    return rpc_call(url, "debug_traceTransaction", [tx_hash, {"tracer": "callTracer"}])
+
+
+def fetch_trace(chain: str, tx_hash: str, artifact_dir: Path, force: bool, source: str) -> None:
     raw_path = artifact_dir / "trace.raw.json"
     tx_path = artifact_dir / "tx.json"
     receipt_path = artifact_dir / "receipt.json"
@@ -296,7 +427,8 @@ def fetch_trace(chain: str, tx_hash: str, artifact_dir: Path, force: bool) -> No
         print(f"Skipping fetch; using existing {raw_path}")
         return
 
-    url = rpc_url(chain)
+    url = rpc_endpoint(chain, source)
+    print(f"Source:  {source}")
     print(f"Chain:   {canonical_chain(chain)}")
     print(f"Tx:      {tx_hash}")
 
@@ -315,11 +447,10 @@ def fetch_trace(chain: str, tx_hash: str, artifact_dir: Path, force: bool) -> No
     write_json(receipt_path, receipt)
     write_json(block_path, block)
     if raw_path.exists() and not force:
-        print(f"Skipping debug_traceTransaction; using existing {raw_path}")
+        print(f"Skipping trace fetch; using existing {raw_path}")
         return
 
-    print("[4/4] debug_traceTransaction (callTracer) ...")
-    trace = rpc_call(url, "debug_traceTransaction", [tx_hash, {"tracer": "callTracer"}])
+    trace = fetch_call_trace(chain, tx_hash, source, url)
     write_json(raw_path, trace)
     print(f"trace.raw.json written ({raw_path.stat().st_size / 1024:.1f} KB)")
 
@@ -1305,16 +1436,23 @@ def main() -> int:
     parser.add_argument("--tx", required=True, help="Transaction hash")
     parser.add_argument("--output-dir", required=True, help="Case folder directly under cases/; artifacts are written under evidence/")
     parser.add_argument("--workspace-root", help="Workspace/repo root; defaults to the current directory")
+    parser.add_argument(
+        "--source",
+        choices=TRACE_SOURCES,
+        default="auto",
+        help="Trace data source. 'auto' (default) uses Alchemy when ALCHEMY_API_KEY is set, otherwise keyless Blockscout.",
+    )
     parser.add_argument("--force", action="store_true", help="Refetch even if trace.raw.json exists")
     args = parser.parse_args()
 
     set_workspace_root(args.workspace_root)
     chain = canonical_chain(args.chain)
+    source = resolve_source(args.source)
     case_dir = resolve_case_dir(args.output_dir)
     case_dir.mkdir(parents=True, exist_ok=True)
     artifact_dir = evidence_dir(case_dir)
     artifact_dir.mkdir(parents=True, exist_ok=True)
-    fetch_trace(chain, args.tx, artifact_dir, args.force)
+    fetch_trace(chain, args.tx, artifact_dir, args.force, source)
     frames = normalize_trace(artifact_dir)
     selector_map = resolve_selectors(case_dir, frames)
     trace_index = write_summary_and_index(artifact_dir, chain, args.tx, frames, selector_map)

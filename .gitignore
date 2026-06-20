@@ -6,6 +6,7 @@ __pycache__/
 *.py[cod]
 .mypy_cache/
 .pytest_cache/
+.venv/
 
 # Local dependencies from earlier Node-based experiments
 node_modules/

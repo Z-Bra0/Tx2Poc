@@ -7,9 +7,13 @@ This project is sponsored by the [DeFiHackLabs AI Credits Initiative](https://x.
 
 ## Requirements
 
-- Alchemy API key for trace fetching (paid feature), set as `ALCHEMY_API_KEY`.
 - Etherscan API key for source/ABI lookup, set as `ETHERSCAN_API_KEY`.
 - Foundry, for running generated PoCs with `forge test`.
+- Trace fetching, via either:
+  - Keyless public Blockscout (default when no Alchemy key is set), or
+  - Alchemy API key for richer trace access (paid), set as `ALCHEMY_API_KEY`.
+
+  Pick a source explicitly with `trace_tx.py --source {auto,alchemy,blockscout}` (`auto` is the default). Blockscout supports ethereum, optimism, base, arbitrum, polygon, and gnosis.
 
 
 ## Basic Use
@@ -55,6 +59,6 @@ For DeFiHackLabs PR work, clone your fork into `DeFiHackLabs/` and add the offic
 
 ## Limitations
 
-- Portable with setup, but not zero-install. It needs Foundry, forge-std, the shared helper files, API keys.
-- Trace fetching requires paid Alchemy access.
+- Portable with setup, but not zero-install. It needs Foundry, forge-std, the shared helper files, and an Etherscan key.
+- Keyless trace fetching relies on public Blockscout availability and is limited to its supported chains; Alchemy is the fallback for other chains or when Blockscout is rate-limited.
 - Large or complex tx traces may be incomplete or inaccurate. Generated analysis and PoCs still need human review.

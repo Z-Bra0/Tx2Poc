@@ -27,8 +27,8 @@ Repo agent skills:
 
 ## Environment
 
-- `ALCHEMY_API_KEY`: required for trace fetching.
 - `ETHERSCAN_API_KEY`: required for source/ABI lookups.
+- `ALCHEMY_API_KEY`: optional. When set, it is the default trace source; otherwise trace fetching falls back to keyless public Blockscout. Override with `trace_tx.py --source {auto,alchemy,blockscout}`.
 
 ## Commands
 

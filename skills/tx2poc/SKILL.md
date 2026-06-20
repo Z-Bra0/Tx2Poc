@@ -21,7 +21,7 @@ If identity is unknown, start with a provisional folder. After role decision, re
 
 ## Setup
 
-Requires Foundry/Forge, `ALCHEMY_API_KEY` for trace fetching, and `ETHERSCAN_API_KEY` for source/ABI lookup.
+Requires Foundry/Forge and `ETHERSCAN_API_KEY` for source/ABI lookup. Trace fetching uses keyless public Blockscout by default, or Alchemy when `ALCHEMY_API_KEY` is set.
 
 For a fresh or broken workspace, read `$SKILL_DIR/references/workspace_setup.md`. If helpers, Foundry config, remappings, and `forge-std` are already present, skip setup and start the workflow.
 
@@ -31,7 +31,7 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
 
 1. Check fetch environment.
 
-   Confirm required RPC and explorer API keys are available.
+   Confirm the explorer API key is available and report the active trace source (Alchemy when `ALCHEMY_API_KEY` is set, otherwise keyless Blockscout).
 
    ```bash
    python "$SKILL_DIR/scripts/check_env.py"
@@ -46,6 +46,8 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
    ```bash
    python "$SKILL_DIR/scripts/trace_tx.py" --chain <chain> --tx <txhash> --output-dir $CASE_DIR
    ```
+
+   The trace source defaults to Alchemy when `ALCHEMY_API_KEY` is set, otherwise keyless Blockscout. Force one with `--source {auto,alchemy,blockscout}` (Blockscout covers ethereum, optimism, base, arbitrum, polygon, gnosis).
 
    Expected output: `$EVIDENCE_DIR/tx.json`, `$EVIDENCE_DIR/receipt.json`, `$EVIDENCE_DIR/block.json`, `$EVIDENCE_DIR/trace.raw.json`, `$EVIDENCE_DIR/trace.summary.txt`, and `$EVIDENCE_DIR/tx_context.json`.
 

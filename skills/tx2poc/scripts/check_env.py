@@ -3,12 +3,18 @@ from __future__ import annotations
 from collections.abc import Mapping
 import os
 
-REQUIRED_ENV_VARS = ("ALCHEMY_API_KEY", "ETHERSCAN_API_KEY")
+REQUIRED_ENV_VARS = ("ETHERSCAN_API_KEY",)
+OPTIONAL_ENV_VARS = ("ALCHEMY_API_KEY",)
 
 
 def missing_env_vars(environ: Mapping[str, str] | None = None) -> list[str]:
     env = os.environ if environ is None else environ
     return [name for name in REQUIRED_ENV_VARS if not env.get(name)]
+
+
+def trace_source(environ: Mapping[str, str] | None = None) -> str:
+    env = os.environ if environ is None else environ
+    return "alchemy" if env.get("ALCHEMY_API_KEY") else "blockscout (keyless)"
 
 
 def check_env(environ: Mapping[str, str] | None = None) -> None:
@@ -19,7 +25,7 @@ def check_env(environ: Mapping[str, str] | None = None) -> None:
 
 def main() -> int:
     check_env()
-    print("Environment preflight ok.")
+    print(f"Environment preflight ok. Trace source: {trace_source()}.")
     return 0
 
 

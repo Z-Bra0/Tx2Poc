@@ -8,6 +8,128 @@ from _load_skill_module import load_tx2poc_script
 trace_tx = load_tx2poc_script("trace_tx")
 
 
+def test_resolve_source_auto_prefers_alchemy_when_key_present(monkeypatch) -> None:
+    monkeypatch.setenv("ALCHEMY_API_KEY", "key")
+    assert trace_tx.resolve_source("auto") == "alchemy"
+    assert trace_tx.resolve_source(None) == "alchemy"
+    monkeypatch.delenv("ALCHEMY_API_KEY", raising=False)
+    assert trace_tx.resolve_source("auto") == "blockscout"
+
+
+def test_resolve_source_explicit_overrides_auto(monkeypatch) -> None:
+    monkeypatch.delenv("ALCHEMY_API_KEY", raising=False)
+    assert trace_tx.resolve_source("alchemy") == "alchemy"
+    monkeypatch.setenv("ALCHEMY_API_KEY", "key")
+    assert trace_tx.resolve_source("blockscout") == "blockscout"
+
+
+def test_resolve_source_rejects_unknown() -> None:
+    with pytest.raises(RuntimeError, match="Unsupported source"):
+        trace_tx.resolve_source("infura")
+
+
+def test_blockscout_base_rejects_unsupported_chain() -> None:
+    assert trace_tx.blockscout_base("eth") == "https://eth.blockscout.com"
+    with pytest.raises(RuntimeError, match="Blockscout source unsupported"):
+        trace_tx.blockscout_base("bsc")
+
+
+def test_rpc_endpoint_routes_by_source() -> None:
+    assert trace_tx.rpc_endpoint("eth", "blockscout") == "https://eth.blockscout.com/api/eth-rpc"
+
+
+def test_parity_trace_to_calltracer_rebuilds_nested_tree() -> None:
+    flat = [
+        {
+            "action": {"callType": "call", "from": "0xaaa", "to": "0xbbb", "value": "0x1", "gas": "0x10", "input": "0xdeadbeef"},
+            "result": {"gasUsed": "0x5", "output": "0x01"},
+            "subtraces": 2,
+            "traceAddress": [],
+            "type": "call",
+        },
+        {
+            "action": {"callType": "staticcall", "from": "0xbbb", "to": "0xccc", "gas": "0x8", "input": "0x70a08231"},
+            "result": {"gasUsed": "0x2", "output": "0x02"},
+            "subtraces": 0,
+            "traceAddress": [0],
+            "type": "call",
+        },
+        {
+            "action": {"callType": "delegatecall", "from": "0xbbb", "to": "0xddd", "gas": "0x4", "input": "0xabcd"},
+            "result": {"gasUsed": "0x1"},
+            "subtraces": 0,
+            "traceAddress": [1],
+            "type": "call",
+        },
+    ]
+
+    root = trace_tx.parity_trace_to_calltracer(flat)
+
+    assert root["type"] == "CALL"
+    assert root["from"] == "0xaaa"
+    assert root["to"] == "0xbbb"
+    assert root["value"] == "0x1"
+    assert root["input"] == "0xdeadbeef"
+    assert root["output"] == "0x01"
+    assert len(root["calls"]) == 2
+    assert root["calls"][0]["type"] == "STATICCALL"
+    assert root["calls"][0]["to"] == "0xccc"
+    assert root["calls"][1]["type"] == "DELEGATECALL"
+    assert root["calls"][1]["output"] is None
+
+
+def test_parity_trace_to_calltracer_orders_siblings_by_trace_address() -> None:
+    flat = [
+        {"action": {"callType": "call", "from": "0xroot"}, "traceAddress": [], "type": "call"},
+        {"action": {"callType": "call", "from": "0xroot", "to": "0x02"}, "traceAddress": [2], "type": "call"},
+        {"action": {"callType": "call", "from": "0xroot", "to": "0x00"}, "traceAddress": [0], "type": "call"},
+        {"action": {"callType": "call", "from": "0xroot", "to": "0x01"}, "traceAddress": [1], "type": "call"},
+    ]
+
+    root = trace_tx.parity_trace_to_calltracer(flat)
+
+    assert [child["to"] for child in root["calls"]] == ["0x00", "0x01", "0x02"]
+
+
+def test_parity_trace_to_calltracer_surfaces_error_payload() -> None:
+    with pytest.raises(RuntimeError, match="Not found"):
+        trace_tx.parity_trace_to_calltracer({"message": "Not found"})
+    with pytest.raises(RuntimeError, match="empty"):
+        trace_tx.parity_trace_to_calltracer([])
+
+
+def test_parity_create_and_suicide_frames() -> None:
+    flat = [
+        {"action": {"callType": "call", "from": "0xroot", "to": "0xfactory"}, "traceAddress": [], "type": "call"},
+        {
+            "action": {"from": "0xfactory", "gas": "0x9", "init": "0x6080", "value": "0x0"},
+            "result": {"gasUsed": "0x7", "address": "0xnew", "code": "0x60"},
+            "traceAddress": [0],
+            "type": "create",
+        },
+        {
+            "action": {"address": "0xnew", "refundAddress": "0xbeef", "balance": "0x3"},
+            "traceAddress": [1],
+            "type": "suicide",
+        },
+    ]
+
+    root = trace_tx.parity_trace_to_calltracer(flat)
+
+    created = root["calls"][0]
+    assert created["type"] == "CREATE"
+    assert created["from"] == "0xfactory"
+    assert created["to"] == "0xnew"
+    assert created["input"] == "0x6080"
+    assert created["output"] == "0x60"
+
+    destroyed = root["calls"][1]
+    assert destroyed["type"] == "SELFDESTRUCT"
+    assert destroyed["from"] == "0xnew"
+    assert destroyed["to"] == "0xbeef"
+    assert destroyed["value"] == "0x3"
+
+
 def test_canonical_chain_aliases() -> None:
     assert trace_tx.canonical_chain("eth") == "ethereum"
     assert trace_tx.canonical_chain("mainnet") == "ethereum"
