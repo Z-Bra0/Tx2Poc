@@ -394,7 +394,22 @@ def parity_trace_to_calltracer(traces: Any) -> dict[str, Any]:
             raise RuntimeError(f"Blockscout trace missing parent for path {list(path)}")
         parent["calls"].append(node)
     if root is None:
-        raise RuntimeError("Blockscout trace has no root frame (empty traceAddress)")
+        first = ordered[0]
+        action = first.get("action") or {}
+        root = {
+            "type": "CALL",
+            "from": action.get("from"),
+            "to": action.get("to"),
+            "value": action.get("value") or "0x0",
+            "gas": action.get("gas", "0x0"),
+            "gasUsed": "0x0",
+            "input": action.get("input") or "0x",
+            "output": None,
+            "calls": [],
+        }
+        for path, node in nodes.items():
+            if len(path) == 1:
+                root["calls"].append(node)
     return root
 
 
