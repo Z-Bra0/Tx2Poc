@@ -7,16 +7,6 @@ description: Export a completed tx2poc case into a local DeFiHackLabs fork, test
 
 Use only after `tx2poc` generated a case and PoC. The user should provide `cases/<case>`. Read `AGENTS.md` for the local DeFiHackLabs path and PR defaults.
 
-## Core Command
-
-After copying the final PoC to `src/test/YYYY-MM/`, run this inside the DeFiHackLabs fork:
-
-```bash
-python add_new_entry.py
-```
-
-Use it as the source of truth for entry text and the expected Forge command, but not for year-based README routing. The helper writes root `README.md`; DeFiHackLabs also keeps year-specific archive pages under `past/YYYY/README.md`.
-
 ## PR Format
 
 Use one branch per PR.
@@ -39,25 +29,52 @@ Body:
 source: <tweet-or-source-link>
 ```
 
-## Approval Gates
+## Approval Gate
 
-Ask before:
+Use one bundled approval after the precheck phase. Ask before creating the export branch, copying the PoC, editing README files, committing, pushing, or opening the PR.
 
-- Writing to `DeFiHackLabs/`: show branch, PoC path, README target, PR title/body.
-- Committing: show `git user.name`, `git user.email`, commit message.
-- GitHub writes: show account, email, remote, branch, action.
-- Changing `GITHUB_TOKEN`, `GH_TOKEN`, or active `gh` account.
+Before asking, show:
 
-No magic phrase. Read-only checks, fetches, and local tests do not need confirmation.
+- source fork repo/owner, derived from `origin`
+- target repo: `SunWeb3Sec/DeFiHackLabs`
+- base branch: `main`
+- fork repo branch name
+- PoC copy path
+- README target(s)
+- PR/commit title
+- PR body
+- `git user.name`
+- `git user.email`
+- push remote/owner
+- GitHub account/auth state
+- action scope: write/copy, README update, test, commit, push, draft PR
+
+If approved, continue through copy, README update, test, commit, push, and draft PR without more prompts while those details remain unchanged.
+
+Ask again only for material changes or exceptions:
+
+- dirty DeFiHackLabs worktree
+- duplicate tx, target path collision, or PoC basename collision
+- unexpected diff, README routing, branch, remote, account, PR title/body, or non-draft PR state
+- failing or inconclusive Forge test
+- need to push/update fork `main`
+- different GitHub credential/account than approved
+- changes to `GITHUB_TOKEN`, `GH_TOKEN`, active `gh` account, or stored credentials
+
+No magic phrase. Case inspection, local fork validation, upstream fetch/sync, duplicate searches, and local tests do not need confirmation. Never push fork `main` without explicit user approval. If approval is narrower than the bundle, ask before exceeding it.
 
 ## Workflow
 
-1. Inspect the case and identify the PoC.
+### Precheck
+
+Run this phase without user confirmation. Stop before approval if any required input is missing, the fork is dirty or misconfigured, upstream sync fails, the tx already exists, a path collides, or the PoC fails quality checks.
+
+1. Inspect `cases/<case>`.
    - Require `metadata.json`, `block.json`, `attack_analysis.md`, and a passing `poc_run.log` or equivalent.
-   - If more than one `*_exp.sol` exists, ask the user which PoC to export.
+   - If more than one `*_exp.sol` exists, ask which PoC to export.
    - Do not inspect a same-transaction DeFiHackLabs sample before the generated PoC exists.
 
-2. Validate the local DeFiHackLabs fork.
+2. Validate `DeFiHackLabs/`.
 
    ```bash
    cd DeFiHackLabs
@@ -70,7 +87,7 @@ No magic phrase. Read-only checks, fetches, and local tests do not need confirma
 
    Require a clean worktree, `origin` as the user's fork, and `upstream` as `SunWeb3Sec/DeFiHackLabs`.
 
-3. Sync from upstream before duplicate checks.
+3. Sync before duplicate checks.
 
    ```bash
    git fetch upstream
@@ -78,13 +95,7 @@ No magic phrase. Read-only checks, fetches, and local tests do not need confirma
    git merge --ff-only upstream/main
    ```
 
-   Push `main` only if the user wants their fork updated:
-
-   ```bash
-   git push origin main
-   ```
-
-4. Check the synced fork for the attack transaction.
+4. Check the synced fork for the attack tx.
 
    ```bash
    rg -ni "<attack_tx_hash>" . --glob '!.git/**'
@@ -92,40 +103,44 @@ No magic phrase. Read-only checks, fetches, and local tests do not need confirma
 
    Stop if the transaction already exists.
 
-5. Re-check PoC quality.
+5. Check PoC quality and destination collisions.
 
    Do not export unless the PoC is a passing, self-contained exploit test. Reject TODO/FIXME placeholders, compile-only tests, raw replay, trace-frame comments, an empty source/message line under `// @Analysis`, or an empty `// Twitter Guy` value.
 
-   Follow Approval Gates before writing to `DeFiHackLabs/`.
-
-6. Create a branch and copy only the final PoC.
-
-   Derive `YYYY-MM` from `block.json`. Use the same timestamp in `add_new_entry.py`. Before copying, ensure the target path and PoC basename do not already exist.
+   Derive `YYYY-MM` from `block.json`; use the same timestamp in `add_new_entry.py`. Before approval, ensure the target path and PoC basename do not already exist.
 
    ```bash
-   git switch -c tx2poc/<case-or-victim>
-   mkdir -p src/test/YYYY-MM
    test ! -e src/test/YYYY-MM/<poc_name>_exp.sol
    rg -ni "<poc_name>_exp.sol" README.md src/test
    ```
 
-   Treat any `rg` output as a collision. If clean, copy:
+   Treat any `rg` output as a collision.
+
+### Approval
+
+Follow Approval Gate now, before writing PR changes to `DeFiHackLabs/`. Prefer one approval that covers copy, README update, test, commit, push, and draft PR creation.
+
+### Execute
+
+1. Create the branch and copy only the final PoC.
 
    ```bash
+   git switch -c tx2poc/<case-or-victim>
+   mkdir -p src/test/YYYY-MM
    cp ../cases/<case>/<poc_name>_exp.sol src/test/YYYY-MM/<poc_name>_exp.sol
    ```
 
-7. Run the DeFiHackLabs helper.
+2. Run the DeFiHackLabs helper.
 
    ```bash
    python add_new_entry.py
    ```
 
-   Select the matching network. Answer `no` to manual incident entry and `yes` to process `.sol` files missing README entries. Provide the attack timestamp, lost amount, concise root cause, and source link.
+   Select the matching network. Answer `no` to manual incident entry and `yes` to process `.sol` files missing README entries. Provide the attack timestamp, lost amount, concise root cause, and source link. Use the helper as the source of truth for entry text and expected Forge command, but not for year-based README routing.
 
-   Verify the README Forge command matches the case chain. Add required network flags, especially `--evm-version shanghai` for Base, optimism, or bsc when expected.
+3. Route README entries.
 
-   Then route the generated README entry to the year archive expected by DeFiHackLabs:
+   `add_new_entry.py` writes root `README.md`. DeFiHackLabs also keeps year archives under `past/YYYY/README.md`.
 
    - Keep or add the root `README.md` table-of-contents link for the incident.
    - For incidents whose year has `past/YYYY/README.md`, move the full incident entry from root `README.md` into `past/YYYY/README.md`.
@@ -134,18 +149,22 @@ No magic phrase. Read-only checks, fetches, and local tests do not need confirma
    - If `past/YYYY/README.md` does not exist, keep the full entry in root `README.md` unless the user explicitly wants a new archive file.
    - Keep incident counters consistent in every README file edited.
 
-   Do not assume `add_new_entry.py` handles this routing; it defaults to root `README.md`.
+4. Verify and test.
 
-8. Test, commit, push, and open a draft PR.
+   Verify the README Forge command matches the case chain. Add required network flags, especially `--evm-version shanghai` for Base, optimism, or bsc when expected. Test with the README Forge command before staging.
 
-   Use the PR title as the commit message. Derive `<owner>` from `origin`, not `upstream`.
-   Follow Approval Gates before committing, pushing, or creating the PR.
-
-   Test with the README Forge command before staging. For named forks, temporarily copy only the matching RPC URL from this repo's `foundry.toml` to the same alias in `DeFiHackLabs/foundry.toml`; restore it after the test and confirm `git diff -- foundry.toml` is empty. Do not use `--config-path ../foundry.toml` or use this to hide compile, revert, or invariant failures.
+   For named forks, temporarily copy only the matching RPC URL from this repo's `foundry.toml` to the same alias in `DeFiHackLabs/foundry.toml`; restore it after the test and confirm `git diff -- foundry.toml` is empty. Do not use `--config-path ../foundry.toml` or use this to hide compile, revert, or invariant failures.
 
    ```bash
    forge test --contracts ./src/test/YYYY-MM/<poc_name>_exp.sol -vvv
-   git add src/test/YYYY-MM/<poc_name>_exp.sol README.md past/YYYY/README.md
+   ```
+
+5. Commit, push, and open a draft PR.
+
+   Use the PR title as the commit message. Derive `<owner>` from `origin`, not `upstream`. Stage only README files actually edited; also run `git add past/YYYY/README.md` if the year archive changed.
+
+   ```bash
+   git add src/test/YYYY-MM/<poc_name>_exp.sol README.md
    git commit -m "Add <Name> PoC. <Mon D>. <Lost Amount>"
    git push origin tx2poc/<case-or-victim>
    git remote get-url origin
@@ -154,20 +173,12 @@ No magic phrase. Read-only checks, fetches, and local tests do not need confirma
 
    Prefer the verified README Forge command if it differs.
 
-   Auth fallback: if `gh auth status` fails but `git push origin <branch>` succeeds, Git and `gh` are using different credentials. After GitHub write approval, prefer `gh pr create`, then the GitHub connector. If both fail, use the Git HTTPS credential helper only in memory for the single PR API request; never print, save, or commit the credential from `git credential fill`.
+   Auth fallback: if `gh auth status` fails but `git push origin <branch>` succeeds, Git and `gh` are using different credentials. If GitHub writes are approved, prefer `gh pr create`, then the GitHub connector. If both fail, use the Git HTTPS credential helper only in memory for the single PR API request; never print, save, or commit the credential from `git credential fill`. Ask again before changing auth state or switching to a different credential/account than the approved one.
 
-## Guardrails
+## Hard Rules
 
 - Treat `DeFiHackLabs/` as a gitignored local clone of the user's fork, not as a tx2poc submodule.
-- Require the DeFiHackLabs repo to be clean before applying changes.
-- Require `origin` to be the user's fork and `upstream` to point to `SunWeb3Sec/DeFiHackLabs`.
-- Sync from `upstream` with fast-forward only before duplicate checks or branch creation.
 - Use a separate branch for each DeFiHackLabs PR.
-- After syncing latest upstream, stop if the attack transaction hash already appears in DeFiHackLabs.
-- Follow Approval Gates.
-- Use the attack timestamp from `block.json` for both the `src/test/YYYY-MM/` folder and the timestamp entered into `add_new_entry.py`.
-- Use the attack year from `block.json` to decide whether the full README incident entry belongs in `past/YYYY/README.md`. `add_new_entry.py` does not do this automatically.
 - Do not overwrite existing DeFiHackLabs PoCs or reuse an existing PoC basename.
-- Do not export PoCs with TODO/FIXME placeholders, compile-only tests, raw replay, trace-frame comments, an empty source/message line under `// @Analysis`, or an empty `// Twitter Guy` header value.
 - Copy only the final Solidity PoC into DeFiHackLabs. Do not copy tx2poc trace JSON, benchmark output, notes, or reviews.
 - Create draft PRs by default.
