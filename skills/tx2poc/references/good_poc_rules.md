@@ -2,27 +2,20 @@
 
 Use this checklist for final review. Keep feedback concrete and limited to issues that materially improve the PoC.
 
-## Basic
+## Core Validity
 
 - Forge passes with the intended exploit test.
+- No placeholders, empty tests, TODO/FIXME, or compile-only assertions.
+- If core identity, ABI/source, helper behavior, or exact address behavior is unclear, report the blocker instead of inventing names or opaque fallbacks.
 - `metadata.json`, `attack_analysis.md`, and the Solidity agree on attacker, attack contract, vulnerable implementation/source address, fork block, and profit asset. Put proxy, entry, and victim roles in metadata or analysis when useful.
 - `@KeyInfo - Total Lost :` is based on real transaction impact, not generated PoC output, and uses at most two decimals plus a unit.
-- Social/reference link lines are kept in `@Analysis`, with empty links allowed, followed by one empty comment line before the PoC summary/root-cause comments.
-- All imports are used. Import shared helpers only when referenced: `../interface.sol`, `../StableMath.sol`, `../tokenhelper.sol`.
-- Reuse shared helpers before writing local code: `interface.sol` for common interfaces, `StableMath.sol` for Balancer stable math, and `tokenhelper.sol`/`TokenHelper` for token helpers. Define local code only for trace-specific surfaces that are missing from shared helpers.
-- Do not define Solidity constants, labels, interfaces, or helpers for addresses/contracts that are only metadata roles and are not used by the executable PoC. Keep unused historical roles in `metadata.json`, `attack_analysis.md`, and header comments only.
-- No placeholders, empty tests, TODO/FIXME, or compile-only assertions.
-- Names and roles come from trace evidence, source/ABI, token metadata, or other trusted evidence.
-- If core identity, ABI/source, helper behavior, or exact address behavior is unclear, report the blocker instead of inventing names or opaque fallbacks.
 - `attack_analysis.md` only claims phases that appear in the PoC, unless an omission is explicit and justified.
-- Preserve core economics: asset provenance, callbacks, phase order, repeated state-dependent actions, and final profit path.
-- If the trace has a clear final profit receiver, the PoC should forward profit there and assert that receiver's balance change. If the trace forwards funds through an attacker-controlled root/coordinator before reaching the final receiver, reproduce that forwarding step. Local test receivers need an explicit reason.
-- Document `block_miner` from block data in `metadata.json`. Do not mark the block miner / block builder as `attacker`, `profit_receiver`, `refund_receiver`, or `victim` based only on a final native-token transfer to that address; classify that transfer as `builder_payment` or `coinbase_payment`.
-- Use `deal` only for initial capital or non-core setup, not to replace protocol-acquired funds.
-- Use a normal local attacker/helper unless source or trace proves exact historical `address(this)` behavior matters.
-- A tx trace cannot prove `for` vs `while`. Use `for` when the repeat count is a known fixed procedure. Use `while` when the repeat count should come from changing state: balances, reserves, price, debt, collateral, or output amount.
 
-- `attack_contract` is the attacker-controlled contract that coordinates the effective exploit flow. Do not pick a thin deployer/wrapper only because it is first reached from the tx sender. If `attacker -> CREATE deployer -> CREATE main -> CALL main`, and `main` performs the flash loan/callback/exploit logic, use `main` as `attack_contract` and record the wrapper separately as `attack_deployer` or `root_deployer`.
+## Roles and Evidence
+
+- Names and roles come from trace evidence, source/ABI, token metadata, or other trusted evidence.
+- Set `attack_contract` to the attacker-controlled contract that performs the exploit logic, not a thin deployer/wrapper. Record wrappers separately as `attack_deployer` or `root_deployer`.
+- When block data is available, document `block_miner` in `metadata.json`. Do not mark the block miner / block builder as `attacker`, `profit_receiver`, `refund_receiver`, or `victim` based only on a final native-token transfer to that address; classify that transfer as `builder_payment` or `coinbase_payment`.
 
 ## Address-Sensitive State
 
@@ -30,24 +23,50 @@ Use this checklist for final review. Keep feedback concrete and limited to issue
 - Probe relevant balances, allowances, and simple address-keyed views such as `creditOf`, `creditlessOf`, `lockedOf`, or `debtOf` by passing explicit selectors. Use protocol-specific calls for epoch/snapshot/collateral state. If historical state matters, use `vm.etch` or historical-address execution and explain why.
 - If a historical attack address only matters because a pre-existing callee/helper stores address-keyed state, patch that callee/helper state to recognize the fresh PoC contract. Avoid using `vm.etch` or deploy-at-address unless the exact address itself is unavoidable. Assert the checked callee/helper state.
 
-## Format
+## Exploit Clarity
+
+- Show the exploit, not the whole trace: precondition, vulnerable behavior, attacker action, and profit or state impact.
+- Keep only setup, exploit-triggering calls, required callbacks, and accounting needed to trigger or prove the exploit.
+- Omit wrappers, historical transfers, and unrelated balance movement unless they affect permissions, pricing, state, repayment, or profit.
+- Prefer a linear `testExploit`; do not hide the vulnerable call or profit assertion behind generic wrappers.
+
+## Factual Fidelity
+
+- Preserve core economics: asset provenance, callbacks, phase order, repeated state-dependent actions, and final profit path.
+- If the trace has a clear final profit receiver, the PoC should forward profit there and assert that receiver's balance change. If the trace forwards funds through an attacker-controlled root/coordinator before reaching the final receiver, reproduce that forwarding step. Local test receivers need an explicit reason.
+- Use `deal` only for initial capital or non-core setup, not to replace protocol-acquired funds.
+- Use a normal local attacker/helper unless source or trace proves exact historical `address(this)` behavior matters.
+- A tx trace cannot prove `for` vs `while`. Use `for` when the repeat count is a known fixed procedure. Use `while` when the repeat count should come from changing state: balances, reserves, price, debt, collateral, or output amount.
+
+## PoC Header Format
+
+- Social/reference link lines are kept in `@Analysis`, with empty links allowed, followed by one empty comment line before the PoC summary/root-cause comments.
+
+## Lean Code
+
+- All imports are used. Import shared helpers only when referenced: `../interface.sol`, `../StableMath.sol`, `../tokenhelper.sol`.
+- Check `../interface.sol` before declaring any local interface. If the needed interface or function signature already exists there, import and use it; reimplementation in the PoC is `needs work`.
+- Reuse shared helpers before writing local code: `StableMath.sol` for Balancer stable math and `tokenhelper.sol`/`TokenHelper` for token helpers. Define local interfaces or helpers only for trace-specific surfaces missing from shared helpers.
+- Do not define Solidity constants, labels, interfaces, or helpers for addresses/contracts that are only metadata roles and are not used by the executable PoC. Keep unused historical roles in `metadata.json`, `attack_analysis.md`, and header comments only.
+- Avoid single-use wrappers around one external call, `userCmd`, or `abi.encode`. Inline the call at the exploit step unless the helper is reused or hides real multi-step logic. For one-off command IDs/selectors, prefer an adjacent comment or same-scope local only when it improves clarity; do not replace a wrapper with file-scope constants for values used once.
+
+## Readability and Format
 
 - Keep the main `BaseTestWithBalanceLog` contract first.
 - Name the main test contract `ContractTest`; do not use lower snake case names such as `<poc_name>_exp` for Solidity contract names.
 - Preserve official short-symbol casing.
 - Avoid leading underscores in authored helper names.
-- Avoid single-use wrappers around one external call, `userCmd`, or `abi.encode`. Inline the call at the exploit step unless the helper is reused or hides real multi-step logic. For one-off command IDs/selectors, prefer an adjacent comment or same-scope local only when it improves clarity; do not replace a wrapper with file-scope constants for values used once.
-- Add short `step N:` comments for key phases.
+- Add short `step 1:`, `step 2:` comments for key exploit phases such as setup, trigger, callback/repay, and profit assertion. Explain the phase, not trace-frame details.
 - Use `vm.createSelectFork("<chain-alias>", forkBlock)` with a local `forkBlock`; do not hardcode provider URLs in Solidity.
 
-## Calldata
+## Typed Reconstruction
 
 - Prefer typed calls and named interfaces over raw replay.
 - Do not copy transaction input, large raw calldata blobs, or raw helper/orchestrator replay.
 - Build calldata or bytes from readable primitives such as `bytes("1")`, `abi.encode`, or `abi.encodePacked` with named values.
 - If raw calldata remains, decode the selector and fields, replace it with typed calls or named encoded values, or mark it as `needs work` with the missing ABI/source evidence.
 
-## Magic Numbers
+## Numbers and Assertions
 
 - Numeric literals are acceptable when they are common units or protocol constants: `1e18`, bps denominators, ERC20 decimals, small fixed loop counts, documented enum IDs, and values copied from verified source.
 - Trace-exact irregular amounts are `needs work` when they can be derived. Prefer balances, reserves, allowances, function parameters, return values, or same-scope state reads.
