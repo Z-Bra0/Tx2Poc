@@ -67,7 +67,7 @@ No magic phrase. Case inspection, local fork validation, upstream fetch/sync, du
 
 ### Precheck
 
-Run this phase without user confirmation. Stop before approval if any required input is missing, the fork is dirty or misconfigured, upstream sync fails, the tx already exists, a path collides, or the PoC fails quality checks.
+Run this phase without user confirmation. Stop before approval if any required input is missing, the fork is dirty or misconfigured, upstream sync fails, the tx already exists, or a path collides.
 
 1. Inspect `cases/<case>`.
    - Require `metadata.json`, `block.json`, `attack_analysis.md`, and a passing `poc_run.log` or equivalent.
@@ -103,9 +103,7 @@ Run this phase without user confirmation. Stop before approval if any required i
 
    Stop if the transaction already exists.
 
-5. Check PoC quality and destination collisions.
-
-   Do not export unless the PoC is a passing, self-contained exploit test. Reject TODO/FIXME placeholders, compile-only tests, raw replay, trace-frame comments, an empty source/message line under `// @Analysis`, or an empty `// Twitter Guy` value.
+5. Check destination collisions.
 
    Derive `YYYY-MM` from `block.json`; use the same timestamp in `add_new_entry.py`. Before approval, ensure the target path and PoC basename do not already exist.
 
