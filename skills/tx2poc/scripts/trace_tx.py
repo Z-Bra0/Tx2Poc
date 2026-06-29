@@ -27,6 +27,10 @@ ALCHEMY_CHAIN_MAP = {
     "bsc": "bnb-mainnet",
 }
 
+PUBLIC_RPC_CHAIN_MAP = {
+    "linea": "https://rpc.linea.build",
+}
+
 CHAIN_ALIASES = {
     "eth": "ethereum",
     "mainnet": "ethereum",
@@ -261,13 +265,21 @@ def json_http_post(url: str, payload: Any, timeout: int = 120) -> Any:
 
 def rpc_url(chain: str) -> str:
     chain = canonical_chain(chain)
+    override = os.environ.get(f"{chain.upper()}_RPC_URL")
+    if override:
+        return override
+
+    public_url = PUBLIC_RPC_CHAIN_MAP.get(chain)
+    if public_url:
+        return public_url
+
     api_key = os.environ.get("ALCHEMY_API_KEY")
     if not api_key:
         raise RuntimeError("ALCHEMY_API_KEY not set in environment")
 
     slug = ALCHEMY_CHAIN_MAP.get(chain)
     if not slug:
-        supported = ", ".join(sorted(ALCHEMY_CHAIN_MAP))
+        supported = ", ".join(sorted(set(ALCHEMY_CHAIN_MAP) | set(PUBLIC_RPC_CHAIN_MAP)))
         raise RuntimeError(f"Unsupported chain: {chain}. Supported: {supported}")
     return f"https://{slug}.g.alchemy.com/v2/{api_key}"
 

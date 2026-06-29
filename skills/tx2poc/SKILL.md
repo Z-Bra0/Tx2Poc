@@ -15,6 +15,7 @@ Workspace-owned paths are under the target repo root: `cases/`, `lib/`, generate
 
 - `$CASE_DIR`: direct child of `cases/`.
 - `$POC_FILE`: `$CASE_DIR/<poc_name>_exp.sol`.
+  If the selected `vulnerable_contract` is unverified, use the normalized vulnerable-contract address prefix instead: set `poc_name` to `unverified_<first4>`, where `<first4>` is the first four lowercase hex characters after `0x`, and write `$POC_FILE` as `$CASE_DIR/unverified_<first4>_exp.sol` (example: `0x16D0...` -> `unverified_16d0_exp.sol`).
 - `$EVIDENCE_DIR`: `$CASE_DIR/evidence`.
 
 If identity is unknown, start with a provisional folder. After role decision, rename to `yyyy-mm-<poc_name>-<txprefix>`. Keep user-facing files in `$CASE_DIR`; keep script-owned factual artifacts and logs in `$EVIDENCE_DIR`.
@@ -71,6 +72,8 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
 
 4. Decide exploit roles.
 
+   If the trace does not show a trace-supported exploited failure point, victim/loss path, and attacker profit or abnormal state transition, stop and report that no attack PoC should be generated. If the tx only withdraws or sells an attacker/owner/deployer/privileged balance, classify it as `partial attack` when an earlier setup/exploit tx is needed, or `rug pull` when it only monetizes controlled funds.
+
    Use `$EVIDENCE_DIR/tx_context.json`, `$EVIDENCE_DIR/trace.summary.txt`, calldata, and selective evidence to identify attacker, root/coordinator contract, attack receiver/helper contracts, vulnerable contract, victim, fork block, final profit asset/receiver, and PoC name. Inspect `delegatecall_pairs` for entry/state versus code-target roles, inspect `call_evidence` for important helper scopes, and trace the final profit transfer path before writing the PoC.
 
    Expected output: `metadata.json`.
@@ -83,7 +86,7 @@ Scripts write factual artifacts only. Codex writes roles, analysis, and Solidity
    python "$SKILL_DIR/scripts/state_probe.py" --chain <chain> --block <fork_block> --address <address> --token <token>
    ```
 
-   Candidate addresses include tx sender, tx target/root attack contract, profit receiver, delegatecall caller/code target, and helper contracts that already existed before the tx. Choose relevant tokens and simple address-keyed `uint view(address)` probes from the trace/source. For helper/callee relationships, use `--contract` with address-returning `--address-view` probes such as `parent(address)`, `referrer(address)`, `owner()`, or `admin()`. Use protocol-specific `cast call` for other state. Use results to decide normal local helpers vs historical-address execution such as `vm.etch`.
+   Candidate addresses include tx sender, tx target/root attack contract, profit receiver, delegatecall caller/code target, and helper contracts that already existed before the tx. Choose relevant tokens and simple address-keyed `uint view(address)` probes from the trace/source. For helper/callee relationships, use `--contract` with address-returning `--address-view` probes such as `parent(address)`, `referrer(address)`, `owner()`, or `admin()`. Use protocol-specific `cast call` for other state. Use results to choose normal local helpers or targeted state patching; do not use `vm.etch`. If exact historical address/code injection is unavoidable, stop and report it as a blocker.
 
 6. Author the analysis and PoC.
 
@@ -135,7 +138,7 @@ User-facing AI-owned files:
 
 - `metadata.json`
 - `attack_analysis.md`
-- `<poc_name>_exp.sol`
+- `<poc_name>_exp.sol`, using `unverified_<first4>_exp.sol` as poc name when the selected vulnerable contract is unverified
 - `final_review.md`
 
 Non-user-facing AI-owned files:
@@ -152,6 +155,7 @@ Write `metadata.json` after deciding:
 - `attacker`: tx sender or final profit receiver.
 - `attack_contract`: attacker-controlled contract driving the call track.
 - `vulnerable_contract`: real vulnerable implementation/source address when a proxy is confirmed; otherwise the protocol address whose behavior is exploited.
+- `poc_name`: descriptive exploit/protocol name for verified contracts. When `vulnerable_contract` is unverified, use `unverified_<first4>` from the normalized vulnerable-contract address so the PoC filename is `unverified_<first4>_exp.sol`.
 - `victim`: fund-losing account/entity only when distinct and trace-supported.
 - `block_miner`: `block.json.miner` / block beneficiary when present.
 
@@ -180,7 +184,7 @@ Detailed format and quality rules live in `$SKILL_DIR/references/good_poc_rules.
 - Treat unresolved core identity, ABI/source, helper behavior, or address-sensitive behavior as a blocker.
 - Prefer typed, readable reconstruction over raw transaction input, large calldata blobs, or opaque replay.
 - Derive irregular trace amounts from nearby balances, reserves, allowances, call outputs, parameters, or state reads when reliable.
-- Rebuild attacker-controlled execution with local helpers. Use historical addresses only when evidence shows exact address behavior matters.
+- Rebuild attacker-controlled execution with local helpers. Do not use `vm.etch`; if exact historical address/code injection is unavoidable, report a blocker instead.
 - Call the trace entry/state address. Use implementation/code-target evidence for interfaces, labels, and source links.
 - Preserve core economics: asset provenance, callbacks, phase order, state-dependent repetition, final forwarding, and profit/state assertion.
 - Keep declarations and numeric values scoped near the logic that uses them.

@@ -49,14 +49,22 @@ Before asking, show:
 - GitHub account/auth state
 - action scope: write/copy, README update, test, commit, push, draft PR
 
-If approved, continue through copy, README update, test, commit, push, and draft PR without more prompts while those details remain unchanged.
+If approved, continue through copy, README update, test, commit, push, and draft PR while approved details remain unchanged.
+
+Do not ask again for in-scope reproducibility fixes that only touch the approved export:
+
+- README Forge flags, including `--evm-version`
+- required network flags
+- helper formatting cleanup, such as final newlines
+- rerunning the verified command
 
 Ask again only for material changes or exceptions:
 
 - dirty DeFiHackLabs worktree
 - duplicate tx, target path collision, or PoC basename collision
 - unexpected diff, README routing, branch, remote, account, PR title/body, or non-draft PR state
-- failing or inconclusive Forge test
+- failing or inconclusive Forge test after scoped command/RPC/evm-version fixes
+- any test fix requiring material PoC/exploit logic changes
 - need to push/update fork `main`
 - different GitHub credential/account than approved
 - changes to `GITHUB_TOKEN`, `GH_TOKEN`, active `gh` account, or stored credentials
@@ -134,7 +142,7 @@ Follow Approval Gate now, before writing PR changes to `DeFiHackLabs/`. Prefer o
    python add_new_entry.py
    ```
 
-   Select the matching network. Answer `no` to manual incident entry and `yes` to process `.sol` files missing README entries. Provide the attack timestamp, lost amount, concise root cause, and source link. Use the helper as the source of truth for entry text and expected Forge command, but not for year-based README routing.
+   Select the matching network. Answer `no` to manual incident entry and `yes` to process `.sol` files missing README entries. Provide the attack timestamp, lost amount, concise root cause, and source link. Use a general vulnerability class for the README-facing reason/title, not a highly specific exploit sentence. Good examples include `Uninitialized Proxy`, `Signature Replay`, `Oracle Misconfiguration`, `Business Logic Flaw`, and `Price Oracle Manipulation`. Use the helper as the source of truth for entry text and the initial Forge command, but not for year-based README routing or final test-command flags.
 
 3. Route README entries.
 
@@ -149,7 +157,18 @@ Follow Approval Gate now, before writing PR changes to `DeFiHackLabs/`. Prefer o
 
 4. Verify and test.
 
-   Verify the README Forge command matches the case chain. Add required network flags, especially `--evm-version shanghai` for Base, optimism, or bsc when expected. Test with the README Forge command before staging.
+   Verify the README Forge command matches the case chain. Add required network flags, especially `--evm-version shanghai` for Base, optimism, or bsc when expected. Do not include inline RPC environment assignments or provider URLs in README commands; strip prefixes such as `AVALANCHE_RPC_URL=https://...` so the published command starts with `forge test`. Test with the README Forge command before staging.
+
+   If the helper-generated README command fails but a scoped command fix passes, update README to the verified command and continue. Mention the correction in the final summary.
+
+   Scoped fixes include:
+
+   - changing `--evm-version`
+   - adding or removing a chain-specific flag
+   - removing inline RPC environment assignments or provider URLs from README commands
+   - restoring helper-touched formatting
+
+   Ask again only if the test remains failing/inconclusive or the fix changes PoC/exploit logic.
 
    For named forks, temporarily copy only the matching RPC URL from this repo's `foundry.toml` to the same alias in `DeFiHackLabs/foundry.toml`; restore it after the test and confirm `git diff -- foundry.toml` is empty. Do not use `--config-path ../foundry.toml` or use this to hide compile, revert, or invariant failures.
 

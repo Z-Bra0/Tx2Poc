@@ -3,19 +3,20 @@ pragma solidity ^0.8.10;
 
 import "../basetest.sol";
 
-// @KeyInfo - Total Lost : {number unit}
-// Attacker : {0x00000000000000000000000000000000cafebabe}
-// Attack Contract : {0x00000000000000000000000000000000deadbeef}
-// Vulnerable Contract : {0x00000000000000000000000000000000baddcafe}
-// Attack Tx : {link: https://skylens.certik.com/tx/eth/0x123456789}
+// @KeyInfo - Total Lost : 123.45 USDC
+// Attacker : 0x00000000000000000000000000000000cafebabe
+// Attack Contract : 0x00000000000000000000000000000000deadbeef
+// Vulnerable Contract : 0x00000000000000000000000000000000baddcafe
+// Attack Tx : https://skylens.certik.com/tx/eth/0x123456789
 
 // @Info
-// Vulnerable Contract Code : {https://etherscan.io/address/0x00000000000000000000000000000000baddcafe#code}
+// Vulnerable Contract Code : https://etherscan.io/address/0x00000000000000000000000000000000baddcafe#code
 
 // @Analysis
-// Twitter Guy : {https://x.com/1nf0s3cpt/status/1583011233363824640}
+// Twitter Guy : https://x.com/1nf0s3cpt/status/1583011233363824640
 //
-// {Attack Summary}
+// Attack summary: ...
+// Root cause: ...
 
 address constant ATTACKER = 0x00000000000000000000000000000000cafebabe;
 address constant ATTACK_CONTRACT = 0x00000000000000000000000000000000deadbeef;
